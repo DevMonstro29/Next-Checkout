@@ -52,9 +52,12 @@ Crie um arquivo `.env` na raiz do projeto:
 ```env
 VITE_SUPABASE_URL=sua_url_do_supabase
 VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_do_supabase
+ADMIN_EMAIL=admin@seudominio.com
 ```
 
-Para o servidor em produção, configure também as variáveis usadas em `server.cjs` (porta, CORS, etc.).
+- `ADMIN_EMAIL` — e-mail da conta admin com acesso total às estatísticas e vendas de todos os usuários.
+- Para o servidor em produção, configure também as variáveis usadas em `server.cjs` (porta, CORS, etc.).
 
 ## 📜 Scripts
 

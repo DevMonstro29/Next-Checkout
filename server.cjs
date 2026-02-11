@@ -45,8 +45,14 @@ function decryptApiKey(encrypted) {
 
 // Carregar variáveis de ambiente do .env
 try {
-  require("dotenv").config();
+  require("dotenv").config({ path: path.join(__dirname, ".env") });
 } catch (e) {}
+
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+function isAdmin(user) {
+  if (!ADMIN_EMAIL || !user?.email) return false;
+  return user.email.trim().toLowerCase() === ADMIN_EMAIL;
+}
 
 const logFile = path.join(__dirname, "error.log");
 
@@ -153,6 +159,104 @@ function makeRequest(url, options) {
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", port: PORT, node: process.version });
+});
+
+// Obter perfil e status de aprovação do usuário logado
+app.get("/api/me", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) {
+    return res.status(401).json({ error: "Não autorizado" });
+  }
+  const token = auth.slice(7);
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return res.status(401).json({ error: "Não autorizado" });
+
+    let { data: profile } = await supabase.from("profiles").select("user_id, full_name, approved, is_admin").eq("user_id", user.id).maybeSingle();
+
+    const adminByDb = !!(profile && profile.is_admin);
+    const adminByEnv = isAdmin(user);
+    const isAdminUser = adminByDb || adminByEnv;
+
+    if (!profile) {
+      const { error: insErr } = await supabase.from("profiles").insert({
+        user_id: user.id,
+        full_name: user.user_metadata?.full_name || "",
+        approved: isAdminUser,
+        is_admin: isAdminUser,
+        email: user.email || "",
+      });
+      if (!insErr) profile = { user_id: user.id, full_name: user.user_metadata?.full_name || "", approved: isAdminUser, is_admin: isAdminUser };
+    } else if (isAdminUser && (!profile.approved || !profile.is_admin)) {
+      await supabase.from("profiles").update({ approved: true, is_admin: true }).eq("user_id", user.id);
+      profile = { ...profile, approved: true, is_admin: true };
+    }
+
+    res.json({
+      user: { id: user.id, email: user.email },
+      profile: {
+        full_name: (profile && profile.full_name) || user.user_metadata?.full_name || "",
+        approved: !!(profile && profile.approved),
+        isAdmin: isAdminUser,
+      },
+    });
+  } catch (e) {
+    console.error("Erro /api/me:", e);
+    res.status(500).json({ error: e.message || "Erro ao buscar perfil" });
+  }
+});
+
+// Listar usuários aguardando aprovação (admin)
+app.get("/api/pending-users", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(403).json({ error: "Acesso negado" });
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    if (!checkIsAdmin(user, profile)) return res.status(403).json({ error: "Acesso negado" });
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, email, created_at")
+      .eq("approved", false)
+      .order("created_at", { ascending: false });
+
+    const users = (profiles || []).map((p) => ({
+      id: p.user_id,
+      full_name: p.full_name || "",
+      email: p.email || "",
+      created_at: p.created_at,
+    }));
+
+    res.json({ users });
+  } catch (e) {
+    console.error("Erro /api/pending-users:", e);
+    res.status(500).json({ error: e.message || "Erro ao listar usuários" });
+  }
+});
+
+// Aprovar usuário (admin)
+app.post("/api/approve-user/:userId", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  const { userId } = req.params;
+  if (!userId) return res.status(400).json({ error: "ID do usuário obrigatório" });
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(403).json({ error: "Acesso negado" });
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    if (!checkIsAdmin(user, profile)) return res.status(403).json({ error: "Acesso negado" });
+
+    const { error: upErr } = await supabase.from("profiles").update({ approved: true }).eq("user_id", userId);
+    if (upErr) throw upErr;
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Erro /api/approve-user:", e);
+    res.status(500).json({ error: e.message || "Erro ao aprovar usuário" });
+  }
 });
 
 // Obter status da API Key PortoPag (configurada ou não)
@@ -336,7 +440,11 @@ app.post("/api/create-pix-payment", async (req, res) => {
   }
 });
 
-// Listar vendas do usuário (painel admin)
+function checkIsAdmin(user, profile) {
+  return !!(profile && profile.is_admin) || isAdmin(user);
+}
+
+// Listar vendas do usuário (painel admin). Admin vê todas as vendas.
 app.get("/api/sales", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith("Bearer ") || !supabase) {
@@ -346,14 +454,22 @@ app.get("/api/sales", async (req, res) => {
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) return res.status(401).json({ error: "Não autorizado" });
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    const adminUser = checkIsAdmin(user, profile);
 
-    const { data: myCheckouts, error: checkoutsError } = await supabase
-      .from("checkouts")
-      .select("id")
-      .eq("user_id", user.id);
-    if (checkoutsError) throw checkoutsError;
+    let checkoutIds;
+    if (adminUser) {
+      const { data: allCheckouts } = await supabase.from("checkouts").select("id");
+      checkoutIds = (allCheckouts || []).map((c) => c.id);
+    } else {
+      const { data: myCheckouts, error: checkoutsError } = await supabase
+        .from("checkouts")
+        .select("id")
+        .eq("user_id", user.id);
+      if (checkoutsError) throw checkoutsError;
+      checkoutIds = (myCheckouts || []).map((c) => c.id);
+    }
 
-    const checkoutIds = (myCheckouts || []).map((c) => c.id);
     if (checkoutIds.length === 0) {
       return res.json({ sales: [] });
     }
@@ -366,7 +482,7 @@ app.get("/api/sales", async (req, res) => {
 
     if (error) throw error;
 
-    const { data: checkoutsList } = await supabase.from("checkouts").select("id, name, slug").in("id", checkoutIds);
+    const { data: checkoutsList } = await supabase.from("checkouts").select("id, name, slug").in("id", [...new Set((sales || []).map((s) => s.checkout_id))]);
     const checkoutMap = {};
     (checkoutsList || []).forEach((c) => { checkoutMap[c.id] = c; });
 
@@ -380,6 +496,50 @@ app.get("/api/sales", async (req, res) => {
   } catch (e) {
     console.error("Erro ao listar vendas:", e);
     res.status(500).json({ error: e.message || "Erro ao listar vendas" });
+  }
+});
+
+// Estatísticas do painel (Início). Admin vê estatísticas globais.
+app.get("/api/stats", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) {
+    return res.status(401).json({ error: "Não autorizado" });
+  }
+  const token = auth.slice(7);
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return res.status(401).json({ error: "Não autorizado" });
+    const { data: statsProfile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    const adminUser = checkIsAdmin(user, statsProfile);
+
+    let checkoutIds;
+    if (adminUser) {
+      const { data: allCheckouts } = await supabase.from("checkouts").select("id");
+      checkoutIds = (allCheckouts || []).map((c) => c.id);
+    } else {
+      const { data: myCheckouts } = await supabase.from("checkouts").select("id").eq("user_id", user.id);
+      checkoutIds = (myCheckouts || []).map((c) => c.id);
+    }
+
+    if (checkoutIds.length === 0) {
+      return res.json({ faturamento: 0, numVendas: 0, ticketMedio: 0 });
+    }
+
+    const { data: sales } = await supabase
+      .from("sales")
+      .select("amount_cents, status")
+      .in("checkout_id", checkoutIds)
+      .eq("status", "paid");
+
+    const pagas = sales || [];
+    const faturamento = pagas.reduce((acc, s) => acc + (s.amount_cents || 0), 0);
+    const numVendas = pagas.length;
+    const ticketMedio = numVendas > 0 ? Math.round(faturamento / numVendas) : 0;
+
+    res.json({ faturamento, numVendas, ticketMedio });
+  } catch (e) {
+    console.error("Erro ao buscar stats:", e);
+    res.status(500).json({ error: e.message || "Erro ao buscar estatísticas" });
   }
 });
 

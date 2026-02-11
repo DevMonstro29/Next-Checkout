@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   SidebarProvider,
@@ -23,24 +24,28 @@ import {
   Plug,
   Settings,
   User,
+  Users,
   LogOut,
   Sun,
   Moon,
   PanelLeft,
 } from 'lucide-react';
 
-const menuItems = [
+const baseMenuItems = [
   { to: '/admin/inicio', icon: Home, label: 'Início' },
   { to: '/admin/vendas', icon: ShoppingCart, label: 'Vendas' },
   { to: '/admin/checkouts', icon: CreditCard, label: 'Checkout' },
   { to: '/admin/dominios', icon: Globe, label: 'Domínios' },
   { to: '/admin/integracoes', icon: Plug, label: 'Integrações' },
   { to: '/admin/configuracoes', icon: Settings, label: 'Configurações' },
+  { to: '/admin/usuarios', icon: Users, label: 'Usuários', adminOnly: true },
   { to: '/admin/perfil', icon: User, label: 'Perfil' },
 ];
 
 const AdminLayoutInner = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useProfile();
+  const menuItems = baseMenuItems.filter((item) => !item.adminOnly || isAdmin);
   const { theme, toggleTheme } = useTheme();
   const { toggleSidebar } = useSidebar();
   const navigate = useNavigate();
@@ -49,7 +54,7 @@ const AdminLayoutInner = () => {
 
   const handleSignOut = () => {
     signOut();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   return (

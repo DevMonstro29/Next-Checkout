@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProfileProvider } from "@/contexts/ProfileContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/admin/ProtectedRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -24,6 +25,7 @@ const DominiosPage = lazy(() => import("./pages/admin/DominiosPage"));
 const IntegracoesPage = lazy(() => import("./pages/admin/IntegracoesPage"));
 const ConfiguracoesPage = lazy(() => import("./pages/admin/ConfiguracoesPage"));
 const PerfilPage = lazy(() => import("./pages/admin/PerfilPage"));
+const UsuariosPage = lazy(() => import("./pages/admin/UsuariosPage"));
 const CheckoutBuilder = lazy(() => import("./pages/admin/CheckoutBuilder"));
 const CheckoutRenderer = lazy(() => import("./pages/CheckoutRenderer"));
 
@@ -72,19 +74,21 @@ const App = () => (
           <BrowserRouter>
             <Suspense fallback={<Loading />}>
               <Routes>
-                {/* Página principal: login */}
-                <Route path="/" element={<Login />} />
+                {/* Login - única rota de acesso ao painel */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/taxa-administrativa" element={<Upsell1 />} />
                 <Route path="/ressarcimento-extra" element={<Upsell2 />} />
 
-                {/* Admin routes */}
-                <Route path="/admin/login" element={<Login />} />
+                {/* Admin - apenas após login */}
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute>
-                      <AdminLayout />
-                    </ProtectedRoute>
+                    <ProfileProvider>
+                      <ProtectedRoute>
+                        <AdminLayout />
+                      </ProtectedRoute>
+                    </ProfileProvider>
                   }
                 >
                   <Route index element={<Navigate to="/admin/inicio" replace />} />
@@ -94,6 +98,7 @@ const App = () => (
                   <Route path="dominios" element={<DominiosPage />} />
                   <Route path="integracoes" element={<IntegracoesPage />} />
                   <Route path="configuracoes" element={<ConfiguracoesPage />} />
+                  <Route path="usuarios" element={<UsuariosPage />} />
                   <Route path="perfil" element={<PerfilPage />} />
                 </Route>
                 <Route

@@ -7,6 +7,8 @@ import { Loader2, LogIn, UserPlus, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,11 +20,22 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setError('As senhas não coincidem. Digite novamente.');
+        return;
+      }
+      if (password.length < 6) {
+        setError('A senha deve ter pelo menos 6 caracteres.');
+        return;
+      }
+    }
+
+    setLoading(true);
     try {
       const result = isSignUp
-        ? await signUp(email, password)
+        ? await signUp(email, password, fullName.trim())
         : await signIn(email, password);
 
       if (result.error) {
@@ -31,7 +44,9 @@ const Login = () => {
         if (isSignUp) {
           setError('');
           setIsSignUp(false);
-          alert('Conta criada! Verifique seu email para confirmar, ou faça login se a confirmação estiver desabilitada.');
+          setFullName('');
+          setConfirmPassword('');
+          alert('Conta criada! Aguarde a aprovação do administrador para acessar o painel.');
         } else {
           navigate('/admin');
         }
@@ -75,6 +90,21 @@ const Login = () => {
         {/* Form card */}
         <div className="bg-white dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-xl shadow-neutral-900/5 dark:shadow-neutral-900/50">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <div>
+                <label className="text-neutral-700 dark:text-neutral-300 text-sm font-medium mb-1.5 block">
+                  Nome ou apelido
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Como deseja ser chamado"
+                  required={isSignUp}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-600 rounded-xl py-3 px-4 text-neutral-900 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 transition-all"
+                />
+              </div>
+            )}
             <div>
               <label className="text-neutral-700 dark:text-neutral-300 text-sm font-medium mb-1.5 block">
                 E-mail
@@ -113,6 +143,23 @@ const Login = () => {
               </div>
             </div>
 
+            {isSignUp && (
+              <div>
+                <label className="text-neutral-700 dark:text-neutral-300 text-sm font-medium mb-1.5 block">
+                  Confirmar senha
+                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Digite a senha novamente"
+                  required={isSignUp}
+                  minLength={6}
+                  className="w-full bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-600 rounded-xl py-3 px-4 text-neutral-900 dark:text-white text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 transition-all"
+                />
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
                 <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
@@ -142,7 +189,7 @@ const Login = () => {
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+              onClick={() => { setIsSignUp(!isSignUp); setError(''); setConfirmPassword(''); setFullName(''); }}
               className="text-neutral-500 dark:text-neutral-400 hover:text-brand-500 dark:hover:text-brand-400 text-sm transition-colors"
             >
               {isSignUp
