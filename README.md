@@ -1,73 +1,97 @@
-# Welcome to your Lovable project
+# NextCheckout
 
-## Project info
+Plataforma de checkout personalizável com construtor visual, suporte a PIX e domínios customizados.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## ✨ Funcionalidades
 
-## How can I edit this code?
+- **Construtor visual** — Monte seu checkout com arrastar e soltar
+- **Pagamento PIX** — Integração nativa para pagamentos instantâneos
+- **Domínios personalizados** — Configure seu próprio domínio por checkout
+- **Dashboard** — Acompanhe vendas, checkouts e métricas
+- **Temas customizáveis** — Cores, tipografia e layout ajustáveis
 
-There are several ways of editing your application.
+## 🛠 Tecnologias
 
-**Use Lovable**
+| Categoria    | Stack                                      |
+|-------------|---------------------------------------------|
+| Frontend    | React 18, TypeScript, Vite 5                |
+| UI          | Tailwind CSS, shadcn/ui, Radix UI           |
+| Backend     | Node.js, Express 5                          |
+| Banco/Dados | Supabase                                    |
+| Formulários | React Hook Form, Zod                        |
+| Drag & Drop | @dnd-kit                                    |
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 📋 Pré-requisitos
 
-Changes made via Lovable will be committed automatically to this repo.
+- [Node.js](https://nodejs.org/) 18+
+- [npm](https://www.npmjs.com/) 9+
 
-**Use your preferred IDE**
+## 🚀 Instalação
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# Clone o repositório
+git clone <URL_DO_REPOSITORIO>
+cd checkout-lovable
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# Instale as dependências
+npm install
 
-Follow these steps:
+# Configure as variáveis de ambiente (veja seção abaixo)
+# Crie um arquivo .env com as variáveis necessárias
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O app estará disponível em `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## ⚙️ Variáveis de ambiente
 
-**Use GitHub Codespaces**
+Crie um arquivo `.env` na raiz do projeto:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```env
+VITE_SUPABASE_URL=sua_url_do_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+```
 
-## What technologies are used for this project?
+Para o servidor em produção, configure também as variáveis usadas em `server.cjs` (porta, CORS, etc.).
 
-This project is built with:
+## 📜 Scripts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Comando           | Descrição                         |
+|-------------------|-----------------------------------|
+| `npm run dev`     | Servidor de desenvolvimento       |
+| `npm run build`   | Build de produção (Vite)          |
+| `npm run build:dev` | Build em modo desenvolvimento   |
+| `npm start`       | Inicia o servidor Node            |
+| `npm run preview` | Preview do build local            |
+| `npm run lint`    | Executa o ESLint                  |
+| `npm test`        | Executa os testes (Vitest)        |
 
-## How can I deploy this project?
+## 📦 Deploy
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+O projeto pode ser implantado em plataformas como Railway, Vercel, Render, etc. O build utiliza `npm install` e `package-lock.json`. Após o build do frontend, use `npm start` para iniciar o servidor Express.
 
-## Can I connect a custom domain to my Lovable project?
+## 📁 Estrutura do projeto
 
-Yes, you can!
+```
+├── src/
+│   ├── components/     # Componentes React
+│   │   ├── admin/      # Layout e rotas protegidas
+│   │   ├── builder/    # Construtor de checkout
+│   │   ├── checkout/   # Componentes do checkout
+│   │   └── ui/         # Componentes shadcn/ui
+│   ├── contexts/       # Contextos React
+│   ├── hooks/          # Hooks customizados
+│   ├── integrations/   # Integrações (Supabase)
+│   ├── lib/            # Utilitários
+│   ├── pages/          # Páginas e rotas
+│   └── types/          # Tipos TypeScript
+├── public/             # Assets estáticos
+├── server.cjs          # Servidor Express
+└── vite.config.ts      # Configuração do Vite
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📄 Licença
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Projeto privado.
