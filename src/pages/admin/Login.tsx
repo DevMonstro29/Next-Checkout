@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Loader2, LogIn, UserPlus, Eye, EyeOff, Sun, Moon } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, Eye, EyeOff, Sun, Moon, CheckCircle2 } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +13,7 @@ const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const { signIn, signUp } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -43,10 +44,10 @@ const Login = () => {
       } else {
         if (isSignUp) {
           setError('');
+          setSuccessMessage('Conta criada! Aguarde a aprovação do administrador para acessar o painel.');
           setIsSignUp(false);
           setFullName('');
           setConfirmPassword('');
-          alert('Conta criada! Aguarde a aprovação do administrador para acessar o painel.');
         } else {
           navigate('/admin');
         }
@@ -166,6 +167,16 @@ const Login = () => {
               </div>
             )}
 
+            {successMessage && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">{successMessage}</p>
+                  <p className="text-emerald-500/80 dark:text-emerald-400/80 text-xs mt-1">Você pode fazer login quando for aprovado.</p>
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -189,7 +200,7 @@ const Login = () => {
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => { setIsSignUp(!isSignUp); setError(''); setConfirmPassword(''); setFullName(''); }}
+              onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccessMessage(''); setConfirmPassword(''); setFullName(''); }}
               className="text-neutral-500 dark:text-neutral-400 hover:text-brand-500 dark:hover:text-brand-400 text-sm transition-colors"
             >
               {isSignUp
