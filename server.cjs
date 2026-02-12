@@ -127,9 +127,20 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || "").trim();
-const corsOptions = FRONTEND_URL
-  ? { origin: FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean), credentials: true }
-  : {};
+const allowedOrigins = ["https://app.nextcheckoutbr.com", "http://localhost:8080", "http://localhost:5173"];
+if (FRONTEND_URL) {
+  FRONTEND_URL.split(",").forEach((o) => {
+    const x = o.trim().replace(/^["']|["']$/g, "");
+    if (x && !allowedOrigins.includes(x)) allowedOrigins.push(x);
+  });
+}
+const corsOptions = {
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
 app.use(cors(corsOptions));
 app.use(express.json());
 
