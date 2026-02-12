@@ -8,6 +8,7 @@ dist-ssr
 
 # Variáveis de ambiente (NUNCA commitar)
 .env
+ENV_VARIABLES.md
 .env.local
 .env.*.local
 .env.development

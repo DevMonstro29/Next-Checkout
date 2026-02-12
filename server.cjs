@@ -50,9 +50,16 @@ try {
 } catch (e) {}
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.ADMIN_EMAIL || "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 function isAdmin(user) {
-  if (!ADMIN_EMAIL || !user?.email) return false;
-  return user.email.trim().toLowerCase() === ADMIN_EMAIL;
+  if (!user?.email) return false;
+  const email = user.email.trim().toLowerCase();
+  if (ADMIN_EMAIL && email === ADMIN_EMAIL) return true;
+  return ADMIN_EMAILS.some((a) => a && email === a);
 }
 
 const logFile = path.join(__dirname, "error.log");
@@ -198,11 +205,13 @@ app.get("/api/me", async (req, res) => {
     }
 
     const banned = !!(profile && profile.is_banned);
+    const approvedByProfile = !!(profile && profile.approved);
+    const approved = banned ? false : (isAdminUser || approvedByProfile);
     res.json({
       user: { id: user.id, email: user.email },
       profile: {
         full_name: (profile && profile.full_name) || user.user_metadata?.full_name || "",
-        approved: banned ? false : !!(profile && profile.approved),
+        approved,
         isAdmin: isAdminUser,
       },
     });

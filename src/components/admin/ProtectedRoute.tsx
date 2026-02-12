@@ -23,12 +23,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       return;
     }
     fetch(apiUrl('/api/me'), { headers: { Authorization: `Bearer ${session.access_token}` } })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('API error');
+        return res.json();
+      })
       .then((data) => {
         setApproved(data?.profile?.approved ?? false);
         setProfile({ isAdmin: data?.profile?.isAdmin ?? false });
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('ProtectedRoute /api/me:', err);
         setApproved(false);
         setProfile({ isAdmin: false });
       })
