@@ -395,6 +395,7 @@ export interface Checkout {
   slug: string;
   status: 'draft' | 'published';
   custom_domain?: string | null;
+  domain_verified_at?: string | null;
   theme: CheckoutTheme;
   settings: CheckoutSettings;
   created_at: string;

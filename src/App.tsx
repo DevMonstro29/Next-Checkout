@@ -28,6 +28,7 @@ const PerfilPage = lazy(() => import("./pages/admin/PerfilPage"));
 const UsuariosPage = lazy(() => import("./pages/admin/UsuariosPage"));
 const CheckoutBuilder = lazy(() => import("./pages/admin/CheckoutBuilder"));
 const CheckoutRenderer = lazy(() => import("./pages/CheckoutRenderer"));
+const RootRouteHandler = lazy(() => import("./components/RootRouteHandler"));
 
 const queryClient = new QueryClient();
 
@@ -76,7 +77,7 @@ const App = () => (
               <Routes>
                 {/* Login - única rota de acesso ao painel */}
                 <Route path="/login" element={<Login />} />
-                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/" element={<RootRouteHandler />} />
                 <Route path="/taxa-administrativa" element={<Upsell1 />} />
                 <Route path="/ressarcimento-extra" element={<Upsell2 />} />
 

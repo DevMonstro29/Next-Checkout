@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const dns = require("dns").promises;
 const https = require("https");
 const http = require("http");
 
@@ -333,6 +334,94 @@ app.post("/api/admin/unban-user/:userId", async (req, res) => {
   } catch (e) {
     console.error("Erro /api/admin/unban-user:", e);
     res.status(500).json({ error: e.message || "Erro ao desbanir usuário" });
+  }
+});
+
+const APP_CANONICAL_HOST = (process.env.APP_CANONICAL_HOST || "app.nextcheckoutbr.com").trim().toLowerCase().replace(/\.$/, "");
+
+function normalizeHost(h) {
+  return (h || "").trim().toLowerCase().replace(/\.$/, "");
+}
+
+async function verifyDomainDns(domain) {
+  const host = normalizeHost(domain);
+  if (!host) return { verified: false, error: "Domínio inválido" };
+  const canonical = normalizeHost(APP_CANONICAL_HOST);
+
+  try {
+    const cnames = await dns.resolve(host, "CNAME");
+    const targets = (cnames || []).map((c) => normalizeHost(String(c)));
+    if (targets.some((t) => t === canonical || t.endsWith("." + canonical) || t.replace(/\.$/, "") === canonical)) {
+      return { verified: true };
+    }
+    return { verified: false, error: "CNAME não aponta para " + APP_CANONICAL_HOST };
+  } catch (e) {
+    if (e.code === "ENODATA") {
+      try {
+        const [customIps, canonicalIps] = await Promise.all([
+          dns.resolve4(host),
+          dns.resolve4(APP_CANONICAL_HOST),
+        ]);
+        const set = new Set(canonicalIps || []);
+        if ((customIps || []).some((ip) => set.has(ip))) return { verified: true };
+        return { verified: false, error: "Use CNAME apontando para " + APP_CANONICAL_HOST };
+      } catch (e2) {
+        return { verified: false, error: "Domínio não resolve. Configure o CNAME para " + APP_CANONICAL_HOST };
+      }
+    }
+    if (e.code === "ENOTFOUND") {
+      return { verified: false, error: "Domínio não encontrado" };
+    }
+    return { verified: false, error: e.message || "Erro ao verificar DNS" };
+  }
+}
+
+// Verificar domínio personalizado (DNS CNAME)
+app.post("/api/verify-domain", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  const { checkoutId, domain } = req.body || {};
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: "Não autorizado" });
+
+    let domainToVerify = domain;
+    let checkoutIdToUpdate = checkoutId;
+
+    if (checkoutId && !domain) {
+      const { data: checkout, error: checkoutErr } = await supabase
+        .from("checkouts")
+        .select("id, custom_domain, user_id")
+        .eq("id", checkoutId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (checkoutErr || !checkout) return res.status(404).json({ error: "Checkout não encontrado" });
+      if (!checkout.custom_domain) return res.status(400).json({ error: "Nenhum domínio configurado neste checkout" });
+      domainToVerify = checkout.custom_domain;
+      checkoutIdToUpdate = checkout.id;
+    } else if (!domainToVerify) {
+      return res.status(400).json({ error: "Informe o domínio ou o ID do checkout" });
+    }
+
+    const result = await verifyDomainDns(domainToVerify);
+
+    if (result.verified && checkoutIdToUpdate) {
+      await supabase
+        .from("checkouts")
+        .update({ domain_verified_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", checkoutIdToUpdate)
+        .eq("user_id", user.id);
+    }
+
+    res.json({
+      verified: result.verified,
+      error: result.error || null,
+      domain: domainToVerify,
+    });
+  } catch (e) {
+    console.error("Erro /api/verify-domain:", e);
+    res.status(500).json({ error: e.message || "Erro ao verificar domínio" });
   }
 });
 

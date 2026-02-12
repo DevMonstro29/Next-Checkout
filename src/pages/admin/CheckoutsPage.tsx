@@ -203,7 +203,7 @@ const CheckoutsPage = () => {
       const value = domainInput.trim() || null;
       const { error } = await supabase
         .from('checkouts')
-        .update({ custom_domain: value, updated_at: new Date().toISOString() })
+        .update({ custom_domain: value, domain_verified_at: null, updated_at: new Date().toISOString() })
         .eq('id', domainModalCheckout.id);
 
       if (error) throw error;
@@ -488,7 +488,7 @@ const CheckoutsPage = () => {
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-xl py-2.5 px-3 text-neutral-900 dark:text-white text-sm placeholder:text-neutral-400 focus:outline-none focus:border-brand-500"
             />
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-              Configure um registro CNAME no seu DNS apontando este domínio para o servidor onde esta aplicação está hospedada. Deixe em branco para usar apenas o link /c/{domainModalCheckout.slug}.
+              Configure um registro CNAME no seu DNS apontando para <code className="font-mono bg-neutral-100 dark:bg-neutral-700 px-1 rounded">{import.meta.env.VITE_APP_CANONICAL_HOST || 'app.nextcheckoutbr.com'}</code>. Depois, verifique em Domínios. Deixe em branco para usar apenas /c/{domainModalCheckout.slug}.
             </p>
             <div className="flex justify-end gap-2 mt-6">
               <button
