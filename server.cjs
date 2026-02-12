@@ -176,7 +176,7 @@ app.get("/api/me", async (req, res) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) return res.status(401).json({ error: "Não autorizado" });
 
-    let { data: profile } = await supabase.from("profiles").select("user_id, full_name, approved, is_admin").eq("user_id", user.id).maybeSingle();
+    let { data: profile } = await supabase.from("profiles").select("user_id, full_name, approved, is_admin, is_banned").eq("user_id", user.id).maybeSingle();
 
     const adminByDb = !!(profile && profile.is_admin);
     const adminByEnv = isAdmin(user);
@@ -196,11 +196,12 @@ app.get("/api/me", async (req, res) => {
       profile = { ...profile, approved: true, is_admin: true };
     }
 
+    const banned = !!(profile && profile.is_banned);
     res.json({
       user: { id: user.id, email: user.email },
       profile: {
         full_name: (profile && profile.full_name) || user.user_metadata?.full_name || "",
-        approved: !!(profile && profile.approved),
+        approved: banned ? false : !!(profile && profile.approved),
         isAdmin: isAdminUser,
       },
     });
@@ -238,6 +239,100 @@ app.get("/api/pending-users", async (req, res) => {
   } catch (e) {
     console.error("Erro /api/pending-users:", e);
     res.status(500).json({ error: e.message || "Erro ao listar usuários" });
+  }
+});
+
+// Listar todos os usuários aprovados com estatísticas (admin)
+app.get("/api/admin/users", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(403).json({ error: "Acesso negado" });
+    const { data: adminProfile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    if (!checkIsAdmin(user, adminProfile)) return res.status(403).json({ error: "Acesso negado" });
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, email, created_at, is_banned")
+      .eq("approved", true)
+      .eq("is_admin", false)
+      .order("created_at", { ascending: false });
+
+    const users = [];
+    for (const p of profiles || []) {
+      const { count: checkoutCount } = await supabase.from("checkouts").select("id", { count: "exact", head: true }).eq("user_id", p.user_id);
+      const { data: checkouts } = await supabase.from("checkouts").select("id, custom_domain").eq("user_id", p.user_id);
+      const checkoutIds = (checkouts || []).map((c) => c.id);
+      const domainsCount = (checkouts || []).filter((c) => c.custom_domain).length;
+      let salesCount = 0;
+      let revenueCents = 0;
+      if (checkoutIds.length > 0) {
+        const { data: sales } = await supabase.from("sales").select("amount_cents, status").in("checkout_id", checkoutIds).eq("status", "paid");
+        salesCount = (sales || []).length;
+        revenueCents = (sales || []).reduce((acc, s) => acc + (s.amount_cents || 0), 0);
+      }
+      users.push({
+        id: p.user_id,
+        full_name: p.full_name || "",
+        email: p.email || "",
+        created_at: p.created_at,
+        is_banned: !!p.is_banned,
+        checkout_count: checkoutCount || 0,
+        sales_count: salesCount,
+        revenue_cents: revenueCents,
+        domains_count: domainsCount,
+      });
+    }
+    res.json({ users });
+  } catch (e) {
+    console.error("Erro /api/admin/users:", e);
+    res.status(500).json({ error: e.message || "Erro ao listar usuários" });
+  }
+});
+
+// Banir usuário (admin)
+app.post("/api/admin/ban-user/:userId", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  const { userId } = req.params;
+  if (!userId) return res.status(400).json({ error: "ID do usuário obrigatório" });
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(403).json({ error: "Acesso negado" });
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    if (!checkIsAdmin(user, profile)) return res.status(403).json({ error: "Acesso negado" });
+    const { data: target } = await supabase.from("profiles").select("is_admin").eq("user_id", userId).maybeSingle();
+    if (target && target.is_admin) return res.status(403).json({ error: "Não é possível banir o administrador" });
+
+    await supabase.from("profiles").update({ is_banned: true }).eq("user_id", userId);
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Erro /api/admin/ban-user:", e);
+    res.status(500).json({ error: e.message || "Erro ao banir usuário" });
+  }
+});
+
+// Desbanir usuário (admin)
+app.post("/api/admin/unban-user/:userId", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  const { userId } = req.params;
+  if (!userId) return res.status(400).json({ error: "ID do usuário obrigatório" });
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(403).json({ error: "Acesso negado" });
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    if (!checkIsAdmin(user, profile)) return res.status(403).json({ error: "Acesso negado" });
+
+    await supabase.from("profiles").update({ is_banned: false }).eq("user_id", userId);
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Erro /api/admin/unban-user:", e);
+    res.status(500).json({ error: e.message || "Erro ao desbanir usuário" });
   }
 });
 
