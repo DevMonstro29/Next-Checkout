@@ -118,7 +118,11 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   }
 }
 
-app.use(cors());
+const FRONTEND_URL = (process.env.FRONTEND_URL || "").trim();
+const corsOptions = FRONTEND_URL
+  ? { origin: FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean), credentials: true }
+  : {};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Helper para fazer requests HTTP sem depender de fetch global
@@ -572,14 +576,14 @@ app.get("/api/payment-status/:transactionId", async (req, res) => {
   }
 });
 
-// Servir arquivos estáticos do frontend (build do Vite)
-app.use(express.static(path.join(__dirname, "dist")));
-app.use(express.static(path.join(__dirname, "public")));
-
-// Qualquer rota que não seja /api serve o frontend (SPA)
-app.get("/{*splat}", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
+// Quando FRONTEND_URL está definido = deploy separado, frontend em outro domínio
+if (!FRONTEND_URL) {
+  app.use(express.static(path.join(__dirname, "dist")));
+  app.use(express.static(path.join(__dirname, "public")));
+  app.get("/{*splat}", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+  });
+}
 
 app.listen(PORT, function () {
   log("Servidor rodando na porta " + PORT);

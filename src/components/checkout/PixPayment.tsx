@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { apiUrl } from "@/lib/api";
 import {
   Copy,
   Check,
@@ -152,7 +153,7 @@ const PixPayment = ({
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/payment-status/${paymentData.transaction_id}`);
+        const response = await fetch(apiUrl(`/api/payment-status/${paymentData.transaction_id}`));
         const result = await response.json();
         if (result?.success && result.data?.status) {
           setPaymentStatus(result.data.status);

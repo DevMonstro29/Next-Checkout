@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { apiUrl } from "@/lib/api";
 import { User, Mail, Phone, CreditCard, Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
 
@@ -84,7 +85,7 @@ const IdentificationForm = ({
     setLoading(true);
     onNameCapture?.(name.trim());
     try {
-      const response = await fetch("/api/create-pix-payment", {
+      const response = await fetch(apiUrl("/api/create-pix-payment"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

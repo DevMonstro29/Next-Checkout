@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiUrl } from '@/lib/api';
 import { ShoppingCart, Filter, Search, Calendar, ArrowUpDown, LayoutGrid, List, Loader2 } from 'lucide-react';
 
 interface Sale {
@@ -54,7 +55,7 @@ const VendasPage = () => {
       setLoading(false);
       return;
     }
-    fetch('/api/sales', {
+    fetch(apiUrl('/api/sales'), {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
       .then((res) => res.json())

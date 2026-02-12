@@ -20,6 +20,7 @@ import {
   FileDigit, Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 const Dashboard = () => {
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
@@ -45,7 +46,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (settingsOpen && session?.access_token) {
-      fetch('/api/portopag-status', {
+      fetch(apiUrl('/api/portopag-status'), {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
         .then((r) => r.json())
@@ -248,7 +249,7 @@ const Dashboard = () => {
     }
     setSavingKey(true);
     try {
-      const res = await fetch('/api/save-portopag-key', {
+      const res = await fetch(apiUrl('/api/save-portopag-key'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

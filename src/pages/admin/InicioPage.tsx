@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiUrl } from '@/lib/api';
 import { TrendingUp, ShoppingBag, Receipt, Info, Loader2 } from 'lucide-react';
 
 const formatCurrency = (cents: number) =>
@@ -15,7 +16,7 @@ const InicioPage = () => {
       setLoading(false);
       return;
     }
-    fetch('/api/stats', {
+    fetch(apiUrl('/api/stats'), {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
       .then((res) => res.json())

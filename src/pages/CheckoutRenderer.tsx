@@ -10,6 +10,7 @@ import StepIndicatorElement from '@/components/builder/elements/StepIndicatorEle
 import PixPayment from '@/components/checkout/PixPayment';
 import { Loader2, MapPin, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 interface PixPaymentData {
   transaction_id: string;
@@ -367,7 +368,7 @@ const CheckoutRenderer = () => {
 
       setCustomerData({ name, email, cpf, phone });
 
-      const response = await fetch('/api/create-pix-payment', {
+      const response = await fetch(apiUrl('/api/create-pix-payment'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

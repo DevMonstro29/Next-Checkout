@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiUrl } from '@/lib/api';
 import { Check, Loader2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,7 +32,7 @@ const UsuariosPage = () => {
       setLoading(false);
       return;
     }
-    fetch('/api/pending-users', {
+    fetch(apiUrl('/api/pending-users'), {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
       .then((res) => {
@@ -50,7 +51,7 @@ const UsuariosPage = () => {
     if (!session?.access_token) return;
     setApprovingId(userId);
     try {
-      const res = await fetch(`/api/approve-user/${userId}`, {
+      const res = await fetch(apiUrl(`/api/approve-user/${userId}`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plug, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,7 +12,7 @@ const IntegracoesPage = () => {
 
   useEffect(() => {
     if (session?.access_token) {
-      fetch('/api/portopag-status', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      fetch(apiUrl('/api/portopag-status'), { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then((r) => r.json())
         .then((data) => {
           setPortopagConfigured(data?.configured ?? false);
@@ -25,7 +26,7 @@ const IntegracoesPage = () => {
     const value = portopagKey === '••••••••••••••••' ? '' : portopagKey.trim();
     setSavingKey(true);
     try {
-      const res = await fetch('/api/save-portopag-key', {
+      const res = await fetch(apiUrl('/api/save-portopag-key'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ apiKey: value }),

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "echo Build skip - dist already included",
+    "build": "vite build",
     "build:dev": "vite build --mode development",
     "start": "node server.cjs",
     "lint": "eslint .",

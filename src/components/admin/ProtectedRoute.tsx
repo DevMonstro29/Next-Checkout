@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/contexts/ProfileContext';
+import { apiUrl } from '@/lib/api';
 import { Loader2, Clock, LogOut } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -21,7 +22,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       setApproved(null);
       return;
     }
-    fetch('/api/me', { headers: { Authorization: `Bearer ${session.access_token}` } })
+    fetch(apiUrl('/api/me'), { headers: { Authorization: `Bearer ${session.access_token}` } })
       .then((res) => res.json())
       .then((data) => {
         setApproved(data?.profile?.approved ?? false);
