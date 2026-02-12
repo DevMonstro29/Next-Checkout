@@ -84,7 +84,11 @@ process.on("unhandledRejection", function (err) {
 log("Iniciando servidor...");
 log("Node version: " + process.version);
 log("__dirname: " + __dirname);
-log("Arquivos na raiz: " + fs.readdirSync(__dirname).join(", "));
+try {
+  log("Arquivos na raiz: " + fs.readdirSync(__dirname).join(", "));
+} catch (e) {
+  log("Aviso readdir: " + (e && e.message));
+}
 
 var distExists = fs.existsSync(path.join(__dirname, "dist"));
 var distIndexExists = fs.existsSync(path.join(__dirname, "dist", "index.html"));
@@ -108,7 +112,7 @@ try {
 }
 
 var app = express();
-var PORT = process.env.PORT || 3000;
+var PORT = process.env.PORT || 8080;
 
 const PORTOPAG_API_URL = "https://api.portopag.com/api/v1";
 const PORTOPAG_API_KEY = process.env.PORTOPAG_API_KEY || "";
