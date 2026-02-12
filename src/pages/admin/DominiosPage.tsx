@@ -78,11 +78,30 @@ const DominiosPage = () => {
             : c
         )
       );
-      toast.success(
-        value
-          ? `Domínio salvo. Configure o CNAME no DNS apontando para ${CANONICAL_HOST} e clique em Verificar.`
-          : 'Domínio removido.'
-      );
+      if (value && session?.access_token) {
+        try {
+          const res = await fetch(apiUrl('/api/add-vercel-domain'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ domain: value }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            toast.success(`Domínio salvo e adicionado automaticamente. Configure o CNAME no DNS e clique em Verificar.`);
+          } else {
+            toast.success(`Domínio salvo. ${data?.error || 'Configure o CNAME e clique em Verificar.'}`);
+          }
+        } catch {
+          toast.success(`Domínio salvo. Configure o CNAME no DNS apontando para ${CANONICAL_HOST} e clique em Verificar.`);
+        }
+      } else if (value) {
+        toast.success(`Domínio salvo. Configure o CNAME no DNS apontando para ${CANONICAL_HOST} e clique em Verificar.`);
+      } else {
+        toast.success('Domínio removido.');
+      }
       setDomainModalCheckout(null);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao salvar domínio');

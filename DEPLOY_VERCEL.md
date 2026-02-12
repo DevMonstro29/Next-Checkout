@@ -74,12 +74,21 @@ Em **Environment Variables**, adicione:
 
 ---
 
-## Passo 7: Domínios de checkouts (ex: pay.pagamentofaciloficial.com)
+## Passo 7: Domínios de checkouts — adição automática
 
-1. Em **Settings** → **Domains**, adicione cada domínio de checkout.
-2. A Vercel exibe o valor CNAME (ex: `cname.vercel-dns.com`).
-3. O cliente configura no DNS: `pay.cliente.com` → CNAME → valor indicado pela Vercel.
-4. No **backend (Railway)**, defina `APP_CANONICAL_HOST` como o valor CNAME da Vercel (ex: `cname.vercel-dns.com`) para a verificação de domínio funcionar.
+Os domínios são adicionados automaticamente na Vercel quando o usuário salva um domínio personalizado no painel. Configure no **backend (Railway)**:
+
+| Variável | Valor | Descrição |
+|----------|-------|-----------|
+| `VERCEL_API_TOKEN` | token da Vercel | Token em [Vercel → Settings → Tokens](https://vercel.com/account/tokens) |
+| `VERCEL_PROJECT_ID` | Project ID ou nome | Use o **Project ID** (Settings → Project ID, ex: `prj_pF5jalAuon01nZWYdbm6u9X1EYgU`) ou o nome `next-checkout` |
+| `VERCEL_TEAM_ID` | (opcional) | ID do time, se usar conta Team |
+| `APP_CANONICAL_HOST` | `cname.vercel-dns.com` | Valor CNAME exibido ao adicionar domínio na Vercel (para verificação) |
+
+**Como obter o token:**
+1. Acesse [vercel.com/account/tokens](https://vercel.com/account/tokens)
+2. Crie um token com permissão **Full Access** ou **Domains**
+3. Cole em `VERCEL_API_TOKEN` no Railway
 
 ---
 

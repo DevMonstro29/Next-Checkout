@@ -6,9 +6,10 @@ dist
 dist-ssr
 *.local
 
-# Variáveis de ambiente (NUNCA commitar)
+# Variáveis de ambiente e deploy (NUNCA commitar)
 .env
 ENV_VARIABLES.md
+DEPLOY_VERCEL.md
 .env.local
 .env.*.local
 .env.development

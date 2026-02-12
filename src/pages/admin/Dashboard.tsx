@@ -232,7 +232,27 @@ const Dashboard = () => {
       setCheckouts((prev) =>
         prev.map((c) => (c.id === domainModalCheckout.id ? { ...c, custom_domain: value } : c))
       );
-      toast.success(value ? 'Domínio salvo. Configure o DNS (CNAME) para este domínio apontar para esta aplicação.' : 'Domínio removido.');
+      if (value && session?.access_token) {
+        try {
+          const res = await fetch(apiUrl('/api/add-vercel-domain'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ domain: value }),
+          });
+          if (res.ok) {
+            toast.success('Domínio salvo e adicionado automaticamente. Configure o CNAME no DNS.');
+          } else {
+            toast.success('Domínio salvo. Configure o CNAME no DNS.');
+          }
+        } catch {
+          toast.success('Domínio salvo. Configure o CNAME no DNS.');
+        }
+      } else {
+        toast.success(value ? 'Domínio salvo. Configure o CNAME no DNS.' : 'Domínio removido.');
+      }
       setDomainModalCheckout(null);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao salvar domínio');

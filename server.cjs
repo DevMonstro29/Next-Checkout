@@ -464,6 +464,58 @@ app.post("/api/verify-domain", async (req, res) => {
   }
 });
 
+const VERCEL_API_TOKEN = (process.env.VERCEL_API_TOKEN || "").trim();
+const VERCEL_PROJECT_ID = (process.env.VERCEL_PROJECT_ID || process.env.VERCEL_PROJECT_NAME || "").trim();
+const VERCEL_TEAM_ID = (process.env.VERCEL_TEAM_ID || "").trim();
+
+// Adicionar domínio automaticamente na Vercel (quando usuário salva custom_domain)
+app.post("/api/add-vercel-domain", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
+  const token = auth.slice(7);
+  const { domain } = req.body || {};
+  const domainName = (domain || "").trim().toLowerCase();
+  if (!domainName) return res.status(400).json({ error: "Domínio obrigatório" });
+  if (!VERCEL_API_TOKEN || !VERCEL_PROJECT_ID) {
+    return res.status(503).json({ error: "Integração Vercel não configurada. Defina VERCEL_API_TOKEN e VERCEL_PROJECT_ID no backend." });
+  }
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: "Não autorizado" });
+    const { data: rows } = await supabase
+      .from("checkouts")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("custom_domain", domainName)
+      .limit(1);
+    if (!rows || rows.length === 0) return res.status(403).json({ error: "Domínio não encontrado em seus checkouts" });
+
+    const url = new URL(`https://api.vercel.com/v10/projects/${encodeURIComponent(VERCEL_PROJECT_ID)}/domains`);
+    if (VERCEL_TEAM_ID) url.searchParams.set("teamId", VERCEL_TEAM_ID);
+    const vercelRes = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + VERCEL_API_TOKEN,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: domainName }),
+    });
+    const vercelData = await vercelRes.json().catch(() => ({}));
+
+    if (!vercelRes.ok) {
+      const errMsg = vercelData.error?.message || vercelData.message || vercelRes.statusText;
+      if (vercelRes.status === 400 && (errMsg.includes("already") || vercelData.error?.code === "domain_already_in_use")) {
+        return res.json({ success: true, message: "Domínio já está configurado na Vercel" });
+      }
+      return res.status(vercelRes.status).json({ error: errMsg || "Erro ao adicionar domínio na Vercel" });
+    }
+    res.json({ success: true, verified: !!vercelData.verified, message: "Domínio adicionado na Vercel. Configure o DNS conforme indicado." });
+  } catch (e) {
+    console.error("Erro /api/add-vercel-domain:", e);
+    res.status(500).json({ error: e.message || "Erro ao adicionar domínio" });
+  }
+});
+
 // Aprovar usuário (admin)
 app.post("/api/approve-user/:userId", async (req, res) => {
   const auth = req.headers.authorization;
