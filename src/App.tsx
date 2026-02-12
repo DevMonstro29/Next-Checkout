@@ -105,9 +105,11 @@ const App = () => (
                 <Route
                   path="/admin/builder/:id"
                   element={
-                    <ProtectedRoute>
-                      <CheckoutBuilder />
-                    </ProtectedRoute>
+                    <ProfileProvider>
+                      <ProtectedRoute>
+                        <CheckoutBuilder />
+                      </ProtectedRoute>
+                    </ProfileProvider>
                   }
                 />
 
