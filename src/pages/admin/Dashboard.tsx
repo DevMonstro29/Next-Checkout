@@ -636,7 +636,7 @@ const Dashboard = () => {
               className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-xl py-2.5 px-3 text-neutral-900 dark:text-white text-sm placeholder:text-neutral-400 focus:outline-none focus:border-brand-500"
             />
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-              Configure um registro CNAME no seu DNS apontando para <code className="font-mono bg-neutral-100 dark:bg-neutral-700 px-1 rounded">{import.meta.env.VITE_APP_CANONICAL_HOST || 'app.nextcheckoutbr.com'}</code>. Depois, verifique em Domínios. Deixe em branco para usar apenas /c/{domainModalCheckout.slug}.
+              Configure um registro CNAME no seu DNS apontando para <code className="font-mono bg-neutral-100 dark:bg-neutral-700 px-1 rounded">{import.meta.env.VITE_APP_CANONICAL_HOST || 'app.nextcheckoutbr.com'}</code>. O link será <span className="font-mono">domínio.com/c/{domainModalCheckout.slug}</span>. Depois verifique em Domínios.
             </p>
             <div className="flex justify-end gap-2 mt-6">
               <button

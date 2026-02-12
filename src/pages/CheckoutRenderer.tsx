@@ -120,7 +120,7 @@ const CheckoutRenderer = () => {
         .eq('status', 'published');
 
       if (byDomain && hostname) {
-        query = query.eq('custom_domain', hostname);
+        query = query.eq('custom_domain', hostname).order('created_at', { ascending: false }).limit(1);
       } else if (slug) {
         query = query.eq('slug', slug);
       } else {
@@ -129,9 +129,24 @@ const CheckoutRenderer = () => {
         return;
       }
 
-      const { data: checkoutData, error: checkoutError } = await query.single();
+      let checkoutData;
+      if (byDomain && hostname) {
+        const { data: rows, error: err } = await query;
+        checkoutData = rows?.[0];
+        if (err && !checkoutData) {
+          setNotFound(true);
+          return;
+        }
+      } else {
+        const { data, error: err } = await query.single();
+        checkoutData = data;
+        if (err || !checkoutData) {
+          setNotFound(true);
+          return;
+        }
+      }
 
-      if (checkoutError || !checkoutData) {
+      if (!checkoutData) {
         setNotFound(true);
         return;
       }

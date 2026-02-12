@@ -427,7 +427,6 @@ app.post("/api/verify-domain", async (req, res) => {
     if (error || !user) return res.status(401).json({ error: "Não autorizado" });
 
     let domainToVerify = domain;
-    let checkoutIdToUpdate = checkoutId;
 
     if (checkoutId && !domain) {
       const { data: checkout, error: checkoutErr } = await supabase
@@ -439,18 +438,18 @@ app.post("/api/verify-domain", async (req, res) => {
       if (checkoutErr || !checkout) return res.status(404).json({ error: "Checkout não encontrado" });
       if (!checkout.custom_domain) return res.status(400).json({ error: "Nenhum domínio configurado neste checkout" });
       domainToVerify = checkout.custom_domain;
-      checkoutIdToUpdate = checkout.id;
     } else if (!domainToVerify) {
       return res.status(400).json({ error: "Informe o domínio ou o ID do checkout" });
     }
 
     const result = await verifyDomainDns(domainToVerify);
 
-    if (result.verified && checkoutIdToUpdate) {
+    if (result.verified) {
+      const ts = new Date().toISOString();
       await supabase
         .from("checkouts")
-        .update({ domain_verified_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq("id", checkoutIdToUpdate)
+        .update({ domain_verified_at: ts, updated_at: ts })
+        .eq("custom_domain", domainToVerify)
         .eq("user_id", user.id);
     }
 

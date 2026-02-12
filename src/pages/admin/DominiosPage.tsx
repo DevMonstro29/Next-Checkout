@@ -295,7 +295,8 @@ const DominiosPage = () => {
                 <li>Adicione um registro CNAME no seu DNS</li>
                 <li>Nome: seu subdomínio (ex: pagamento)</li>
                 <li>Valor: <code className="font-mono">{CANONICAL_HOST}</code></li>
-                <li>Salve o domínio e clique em &quot;Verificar&quot; para ativar</li>
+                <li>O link de cada checkout será: <code className="font-mono">domínio.com/c/slug</code></li>
+                <li>Salve e clique em &quot;Verificar&quot; para ativar</li>
               </ol>
             </div>
             <div className="flex justify-end gap-2 mt-6">
