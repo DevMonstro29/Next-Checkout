@@ -254,7 +254,12 @@ function BuilderContent() {
             {/* Preview in new tab */}
             {checkout.status === 'published' && (
               <button
-                onClick={() => window.open(`/c/${checkout.slug}`, '_blank')}
+                onClick={() => {
+                  const url = checkout.custom_domain
+                    ? `https://${checkout.custom_domain.replace(/^https?:\/\//, '')}/c/${checkout.slug}`
+                    : `/c/${checkout.slug}`;
+                  window.open(url, '_blank');
+                }}
                 className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all"
                 title="Ver checkout"
               >

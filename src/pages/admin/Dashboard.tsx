@@ -475,7 +475,10 @@ const Dashboard = () => {
                           {checkout.status === 'published' && (
                             <button
                               onClick={() => {
-                                window.open(`/c/${checkout.slug}`, '_blank');
+                                const url = checkout.custom_domain
+                                  ? `https://${checkout.custom_domain.replace(/^https?:\/\//, '')}/c/${checkout.slug}`
+                                  : `/c/${checkout.slug}`;
+                                window.open(url, '_blank');
                                 setMenuOpen(null);
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600 flex items-center gap-2"
