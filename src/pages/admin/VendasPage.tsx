@@ -75,7 +75,7 @@ const VendasPage = () => {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Vendas</h1>
@@ -129,7 +129,7 @@ const VendasPage = () => {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-gradient-to-br from-neutral-50/80 to-white dark:from-neutral-800/50 dark:to-neutral-900/50 overflow-hidden min-h-[420px] flex flex-col">
+      <div className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-gradient-to-br from-neutral-50/80 to-white dark:from-neutral-800/50 dark:to-neutral-900/50 overflow-auto min-h-[420px] flex flex-col">
         {loading && (
           <div className="flex-1 flex items-center justify-center p-12">
             <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
@@ -138,7 +138,7 @@ const VendasPage = () => {
 
         {!loading && filtered.length > 0 && (
           <>
-            <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white/60 dark:bg-neutral-800/60 px-4 py-3 grid grid-cols-12 gap-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+            <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white/60 dark:bg-neutral-800/60 px-4 py-3 grid grid-cols-12 gap-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider min-w-[560px]">
               <span className="col-span-4 flex items-center gap-1">
                 Cliente / Pedido
                 <ArrowUpDown className="w-3 h-3 opacity-50" />
@@ -152,7 +152,7 @@ const VendasPage = () => {
               {filtered.map((sale) => (
                 <div
                   key={sale.id}
-                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center text-sm hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors"
+                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center text-sm hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors min-w-[560px]"
                 >
                   <div className="col-span-4 min-w-0">
                     <p className="font-medium text-neutral-900 dark:text-white truncate">

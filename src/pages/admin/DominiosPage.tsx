@@ -149,7 +149,7 @@ const DominiosPage = () => {
   const withoutDomain = checkouts.filter((c) => !c.custom_domain);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Domínios</h1>
         <p className="text-neutral-500 dark:text-neutral-400 mt-1">

@@ -85,7 +85,7 @@ const PerfilPage = () => {
     displayName !== currentName || avatarFile !== null || (avatarUrl !== currentAvatar && !avatarFile);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Perfil</h1>
         <p className="text-neutral-500 dark:text-neutral-400 mt-1">Gerencie suas informações pessoais</p>

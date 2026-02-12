@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
@@ -47,7 +48,7 @@ const AdminLayoutInner = () => {
   const { isAdmin } = useProfile();
   const menuItems = baseMenuItems.filter((item) => !item.adminOnly || isAdmin);
   const { theme, toggleTheme } = useTheme();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
   const avatarUrl = (user?.user_metadata as Record<string, string> | undefined)?.avatar_url;
@@ -78,7 +79,7 @@ const AdminLayoutInner = () => {
                 {menuItems.map(({ to, icon: Icon, label }) => (
                   <SidebarMenuItem key={to}>
                     <SidebarMenuButton asChild isActive={location.pathname === to}>
-                      <NavLink to={to} className="flex items-center gap-2">
+                      <NavLink to={to} className="flex items-center gap-2" onClick={() => isMobile && setOpenMobile(false)}>
                         {to === '/admin/perfil' && avatarUrl ? (
                           <span className="relative h-4 w-4 min-h-4 min-w-4 shrink-0 rounded-full overflow-hidden border border-neutral-200 dark:border-neutral-600 flex items-center justify-center">
                             <img
@@ -110,13 +111,13 @@ const AdminLayoutInner = () => {
         <SidebarFooter className="border-t border-neutral-200 dark:border-neutral-800">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={toggleTheme}>
+              <SidebarMenuButton onClick={() => { toggleTheme(); isMobile && setOpenMobile(false); }}>
                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleSignOut} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+              <SidebarMenuButton onClick={() => { handleSignOut(); isMobile && setOpenMobile(false); }} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                 <LogOut className="h-4 w-4" />
                 <span>Sair</span>
               </SidebarMenuButton>
@@ -132,7 +133,10 @@ const AdminLayoutInner = () => {
       </Sidebar>
 
       <SidebarInset>
-        <header className="sticky top-0 z-40 flex h-12 items-center border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm px-4" aria-hidden="true" />
+        <header className="sticky top-0 z-40 flex h-12 sm:h-14 items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm px-3 sm:px-4">
+          <SidebarTrigger className="md:hidden" />
+          <div className="flex-1 min-w-0" />
+        </header>
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>

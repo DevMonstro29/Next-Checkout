@@ -29,6 +29,9 @@ const CheckoutsPage = () => {
   const [domainModalCheckout, setDomainModalCheckout] = useState<Checkout | null>(null);
   const [domainInput, setDomainInput] = useState('');
   const [savingDomain, setSavingDomain] = useState(false);
+  const [renameModalCheckout, setRenameModalCheckout] = useState<Checkout | null>(null);
+  const [renameInput, setRenameInput] = useState('');
+  const [savingRename, setSavingRename] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const { user, session } = useAuth();
   const navigate = useNavigate();
@@ -197,6 +200,39 @@ const CheckoutsPage = () => {
     setMenuOpen(null);
   };
 
+  const openRenameModal = (c: Checkout) => {
+    setRenameModalCheckout(c);
+    setRenameInput(c.name || '');
+    setMenuOpen(null);
+  };
+
+  const saveRename = async () => {
+    if (!renameModalCheckout) return;
+    const trimmed = renameInput.trim();
+    if (!trimmed) {
+      toast.error('O nome não pode ficar vazio');
+      return;
+    }
+    setSavingRename(true);
+    try {
+      const { error } = await supabase
+        .from('checkouts')
+        .update({ name: trimmed, updated_at: new Date().toISOString() })
+        .eq('id', renameModalCheckout.id);
+
+      if (error) throw error;
+      setCheckouts((prev) =>
+        prev.map((c) => (c.id === renameModalCheckout.id ? { ...c, name: trimmed } : c))
+      );
+      toast.success('Nome atualizado!');
+      setRenameModalCheckout(null);
+    } catch (err: unknown) {
+      toast.error((err as { message?: string })?.message || 'Erro ao renomear');
+    } finally {
+      setSavingRename(false);
+    }
+  };
+
   const saveDomain = async () => {
     if (!domainModalCheckout) return;
     setSavingDomain(true);
@@ -266,7 +302,7 @@ const CheckoutsPage = () => {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header row */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -333,9 +369,9 @@ const CheckoutsPage = () => {
           {filtered.map((checkout) => (
             <div
               key={checkout.id}
-              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all group relative shadow-sm dark:shadow-none"
+              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all group relative shadow-sm dark:shadow-none flex flex-col"
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <span
                   className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                     checkout.status === 'published'
@@ -370,6 +406,13 @@ const CheckoutsPage = () => {
                         >
                           <Copy className="w-3.5 h-3.5" />
                           Duplicar
+                        </button>
+                        <button
+                          onClick={() => openRenameModal(checkout)}
+                          className="w-full text-left px-4 py-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600 flex items-center gap-2"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Renomear
                         </button>
                         <button
                           onClick={() => openDomainModal(checkout)}
@@ -407,21 +450,24 @@ const CheckoutsPage = () => {
                 </div>
               </div>
 
-              <h3 className="text-neutral-900 dark:text-white font-semibold text-lg mb-1 truncate">{checkout.name}</h3>
-              <p className={`text-neutral-400 dark:text-neutral-500 text-xs font-mono truncate ${checkout.custom_domain ? 'mb-1' : 'mb-4'}`}>/c/{checkout.slug}</p>
-              {checkout.custom_domain && (
-                <p className="text-brand-500 dark:text-brand-400 text-xs mb-4 font-mono truncate" title="Domínio próprio">
-                  {checkout.custom_domain}
+              <div className="flex-1 min-h-0">
+                <h3 className="text-neutral-900 dark:text-white font-semibold text-lg mb-1 truncate">{checkout.name}</h3>
+                <p className="text-neutral-400 dark:text-neutral-500 text-xs font-mono truncate mb-1">/c/{checkout.slug}</p>
+                {checkout.custom_domain ? (
+                  <p className="text-brand-500 dark:text-brand-400 text-xs mb-2 font-mono truncate" title="Domínio próprio">
+                    {checkout.custom_domain}
+                  </p>
+                ) : (
+                  <div className="h-5 mb-2" aria-hidden />
+                )}
+                <p className="text-neutral-400 dark:text-neutral-500 text-xs">
+                  Criado em {new Date(checkout.created_at).toLocaleDateString('pt-BR')}
                 </p>
-              )}
-
-              <p className="text-neutral-400 dark:text-neutral-500 text-xs mb-4">
-                Criado em {new Date(checkout.created_at).toLocaleDateString('pt-BR')}
-              </p>
+              </div>
 
               <button
                 onClick={() => navigate(`/admin/builder/${checkout.id}`)}
-                className="w-full bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 text-neutral-700 dark:text-white font-medium py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2"
+                className="w-full mt-4 bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 text-neutral-700 dark:text-white font-medium py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-2 flex-shrink-0"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 Editar
@@ -529,6 +575,53 @@ const CheckoutsPage = () => {
                 className="px-4 py-2 rounded-xl text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-60 flex items-center gap-2"
               >
                 {savingDomain ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Renomear checkout */}
+      {renameModalCheckout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setRenameModalCheckout(null)} />
+          <div className="relative bg-white dark:bg-neutral-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">Renomear checkout</h3>
+              <button
+                onClick={() => setRenameModalCheckout(null)}
+                className="p-1 rounded-lg text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+              Nome do checkout
+            </label>
+            <input
+              type="text"
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+              placeholder="Ex: Checkout Ecommerce"
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-xl py-2.5 px-3 text-neutral-900 dark:text-white text-sm placeholder:text-neutral-400 focus:outline-none focus:border-brand-500 mb-4"
+            />
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
+              O slug <span className="font-mono">/c/{renameModalCheckout.slug}</span> permanece o mesmo.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setRenameModalCheckout(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveRename}
+                disabled={savingRename}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-brand-500 hover:bg-brand-600 text-white disabled:opacity-60 flex items-center gap-2"
+              >
+                {savingRename ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
               </button>
             </div>
           </div>

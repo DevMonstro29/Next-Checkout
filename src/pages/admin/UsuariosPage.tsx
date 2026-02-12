@@ -160,7 +160,7 @@ const UsuariosPage = () => {
 
   if (forbidden) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 text-center">
           <p className="text-amber-600 dark:text-amber-400 font-medium">Acesso restrito</p>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
@@ -177,7 +177,7 @@ const UsuariosPage = () => {
   ];
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Usuários</h1>
         <p className="text-neutral-500 dark:text-neutral-400 mt-1">
@@ -315,7 +315,7 @@ const UsuariosPage = () => {
 
       {/* Aba Solicitações */}
       {activeTab === 'solicitacoes' && (
-        <div className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-gradient-to-br from-neutral-50/80 to-white dark:from-neutral-800/50 dark:to-neutral-900/50 overflow-hidden min-h-[200px]">
+        <div className="rounded-3xl border border-neutral-200 dark:border-neutral-700 bg-gradient-to-br from-neutral-50/80 to-white dark:from-neutral-800/50 dark:to-neutral-900/50 overflow-hidden min-h-[200px] overflow-x-auto">
           {pendingLoading && (
             <div className="flex items-center justify-center p-12">
               <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
@@ -323,7 +323,7 @@ const UsuariosPage = () => {
           )}
 
           {!pendingLoading && pendingUsers.length > 0 && (
-            <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-700 min-w-[520px]">
               <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white/60 dark:bg-neutral-800/60 px-4 py-3 grid grid-cols-12 gap-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                 <span className="col-span-4">Nome</span>
                 <span className="col-span-4">E-mail</span>

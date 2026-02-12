@@ -23,9 +23,11 @@ import SettingsEditor from '@/components/builder/SettingsEditor';
 import {
   ArrowLeft, Save, Loader2, Undo2, Redo2, Eye, Globe,
   Palette, Layers, ShoppingBag, Settings, Monitor, Smartphone,
-  Sun, Moon, QrCode,
+  Sun, Moon, QrCode, PanelLeft, PanelRight,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useTheme } from '@/contexts/ThemeContext';
 import ResizeHandle from '@/components/builder/ResizeHandle';
 import PixPageTab from '@/components/builder/PixPageTab';
@@ -37,6 +39,9 @@ function BuilderContent() {
   const { theme: appTheme, toggleTheme } = useTheme();
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('mobile');
   const [dragActiveType, setDragActiveType] = useState<string | null>(null);
+  const [leftSheetOpen, setLeftSheetOpen] = useState(false);
+  const [rightSheetOpen, setRightSheetOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Resizable sidebars
   const [leftWidth, setLeftWidth] = useState(() => {
@@ -79,6 +84,10 @@ function BuilderContent() {
   useEffect(() => {
     if (id) loadCheckout(id);
   }, [id, loadCheckout]);
+
+  useEffect(() => {
+    if (activeTab === 'pix_page') setRightSheetOpen(false);
+  }, [activeTab]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -177,14 +186,35 @@ function BuilderContent() {
     >
       <div className="h-screen flex flex-col bg-neutral-50 dark:bg-neutral-900 transition-colors">
         {/* Top toolbar */}
-        <header className="h-12 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex items-center justify-between px-3 flex-shrink-0 z-50 transition-colors">
-          <div className="flex items-center gap-2">
+        <header className="h-12 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex items-center justify-between px-2 sm:px-3 flex-shrink-0 z-50 transition-colors overflow-x-auto">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button
               onClick={() => navigate('/admin')}
               className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
+            {/* Mobile: toggle sidebars */}
+            {isMobile && (
+              <>
+                <button
+                  onClick={() => setLeftSheetOpen(true)}
+                  className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all"
+                  title="Painel esquerdo"
+                >
+                  <PanelLeft className="w-4 h-4" />
+                </button>
+                {activeTab !== 'pix_page' && (
+                  <button
+                    onClick={() => setRightSheetOpen(true)}
+                    className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all"
+                    title="Propriedades"
+                  >
+                    <PanelRight className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            )}
             <div className="h-5 w-px bg-neutral-200 dark:bg-neutral-700" />
             <img src="/logo-icon.png" alt="NextCheckout" className="w-7 h-7 object-contain" />
             <span className="text-neutral-900 dark:text-white text-sm font-medium truncate max-w-[200px]">
@@ -285,9 +315,9 @@ function BuilderContent() {
 
         {/* Main area */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left sidebar - Palette & tabs */}
+          {/* Left sidebar - Palette & tabs (hidden on mobile, shown in Sheet) */}
           <div
-            className="border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col flex-shrink-0 overflow-hidden transition-colors"
+            className={`border-r border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex flex-col flex-shrink-0 overflow-hidden transition-colors ${isMobile ? 'hidden' : ''}`}
             style={{ width: leftWidth }}
           >
             {/* Tab buttons */}
@@ -323,14 +353,16 @@ function BuilderContent() {
             </div>
           </div>
 
-          {/* Left resize handle */}
-          <ResizeHandle
-            side="left"
-            currentWidth={leftWidth}
-            minWidth={200}
-            maxWidth={450}
-            onResize={handleLeftResize}
-          />
+          {/* Left resize handle (hidden on mobile) */}
+          {!isMobile && (
+            <ResizeHandle
+              side="left"
+              currentWidth={leftWidth}
+              minWidth={200}
+              maxWidth={450}
+              onResize={handleLeftResize}
+            />
+          )}
 
           {/* Center - Canvas or PIX Page Preview */}
           {activeTab === 'pix_page' ? (
@@ -339,8 +371,8 @@ function BuilderContent() {
             <BuilderCanvas previewMode={previewMode} />
           )}
 
-          {/* Right resize handle - hidden on PIX page tab */}
-          {activeTab !== 'pix_page' && (
+          {/* Right resize handle - hidden on PIX page tab and mobile */}
+          {activeTab !== 'pix_page' && !isMobile && (
             <ResizeHandle
               side="right"
               currentWidth={rightWidth}
@@ -350,8 +382,8 @@ function BuilderContent() {
             />
           )}
 
-          {/* Right sidebar - Properties (hidden on PIX page tab) */}
-          {activeTab !== 'pix_page' && (
+          {/* Right sidebar - Properties (hidden on PIX page tab; on mobile shown in Sheet) */}
+          {activeTab !== 'pix_page' && !isMobile && (
             <div
               className="border-l border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 flex-shrink-0 overflow-hidden transition-colors"
               style={{ width: rightWidth }}
@@ -361,6 +393,57 @@ function BuilderContent() {
           )}
         </div>
       </div>
+
+      {/* Mobile: Left sidebar as Sheet */}
+      <Sheet open={leftSheetOpen} onOpenChange={setLeftSheetOpen}>
+        <SheetContent
+          side="left"
+          className="flex flex-col p-0 gap-0 w-[85vw] max-w-[320px] sm:max-w-sm border-neutral-200 dark:border-neutral-700"
+        >
+          <div className="flex border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-2.5 flex flex-col items-center gap-0.5 transition-all text-[10px] min-w-0 ${
+                  activeTab === tab.id
+                    ? 'text-brand-500 dark:text-brand-400 border-b-2 border-brand-500 dark:border-brand-400 bg-neutral-50 dark:bg-neutral-700/30'
+                    : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                }`}
+                title={tab.label}
+              >
+                <tab.icon className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate w-full text-center">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+            {activeTab === 'elements' && (
+              <div className="p-2">
+                <ElementPalette />
+              </div>
+            )}
+            {activeTab === 'theme' && <ThemeEditor />}
+            {activeTab === 'product' && <ProductEditor />}
+            {activeTab === 'settings' && <SettingsEditor />}
+            {activeTab === 'pix_page' && <PixPageTab />}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Mobile: Right sidebar (Properties) as Sheet */}
+      {activeTab !== 'pix_page' && (
+        <Sheet open={rightSheetOpen} onOpenChange={setRightSheetOpen}>
+          <SheetContent
+            side="right"
+            className="flex flex-col p-0 gap-0 w-[85vw] max-w-[340px] sm:max-w-sm border-neutral-200 dark:border-neutral-700"
+          >
+            <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+              <PropertiesPanel />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Drag overlay */}
       <DragOverlay>
