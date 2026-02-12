@@ -60,7 +60,8 @@ const DominiosPage = () => {
     if (!domainModalCheckout) return;
     setSavingDomain(true);
     try {
-      const value = domainInput.trim() || null;
+      const raw = domainInput.trim() || null;
+      const value = raw ? raw.toLowerCase().replace(/^https?:\/\//, '') : null;
       const { error } = await supabase
         .from('checkouts')
         .update({
@@ -86,16 +87,16 @@ const DominiosPage = () => {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify({ domain: value }),
+            body: JSON.stringify({ domain: value, checkoutId: domainModalCheckout.id }),
           });
           const data = await res.json();
           if (res.ok) {
-            toast.success(`Domínio salvo e adicionado automaticamente. Configure o CNAME no DNS e clique em Verificar.`);
+            toast.success(`Domínio salvo e adicionado na Vercel. Configure o CNAME no DNS e clique em Verificar.`);
           } else {
-            toast.success(`Domínio salvo. ${data?.error || 'Configure o CNAME e clique em Verificar.'}`);
+            toast.error(data?.error || 'Erro ao adicionar na Vercel. Configure VERCEL_API_TOKEN no Railway.');
           }
         } catch {
-          toast.success(`Domínio salvo. Configure o CNAME no DNS apontando para ${CANONICAL_HOST} e clique em Verificar.`);
+          toast.error('Erro ao adicionar domínio na Vercel. Verifique a conexão com o backend.');
         }
       } else if (value) {
         toast.success(`Domínio salvo. Configure o CNAME no DNS apontando para ${CANONICAL_HOST} e clique em Verificar.`);

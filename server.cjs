@@ -131,6 +131,7 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || "").trim();
+const API_BASE_URL = (process.env.API_BASE_URL || process.env.VITE_API_URL || "").trim().replace(/\/$/, "");
 const allowedOrigins = ["https://app.nextcheckoutbr.com", "http://localhost:8080", "http://localhost:5173"];
 if (FRONTEND_URL) {
   FRONTEND_URL.split(",").forEach((o) => {
@@ -162,6 +163,86 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 204,
 }));
+
+// Webhook PortoPag (docs.portopag.com): event, transaction_id no root; responder 200 OK em <5s
+app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const rawBody = (req.body && Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "") || "{}";
+    const timestamp = (req.headers["x-pagou-timestamp"] || req.headers["x-portopag-timestamp"] || "").toString();
+    const signature = (req.headers["x-pagou-signature"] || req.headers["x-portopag-signature"] || "").toString();
+    let payload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return res.status(400).json({ error: "JSON inválido" });
+    }
+    const event = (payload.event || payload.event_name || payload.name || "").toLowerCase();
+    const txnId = payload.transaction_id || (payload.data && (payload.data.transaction_id || payload.data.transactionid)) || payload.id || "";
+
+    if (!txnId) {
+      return res.status(400).json({ error: "transaction_id ausente" });
+    }
+
+    if (!supabase) {
+      return res.status(503).json({ error: "Banco não configurado" });
+    }
+
+    const { data: sale } = await supabase
+      .from("sales")
+      .select("id, checkout_id")
+      .eq("transaction_id", txnId)
+      .maybeSingle();
+
+    if (!sale) {
+      log("Webhook: venda não encontrada para transaction_id=" + txnId);
+      return res.status(200).json({ received: true });
+    }
+
+    if (timestamp && signature) {
+      let apiKey = PORTOPAG_API_KEY;
+      if (sale.checkout_id) {
+        const { data: checkout } = await supabase.from("checkouts").select("user_id").eq("id", sale.checkout_id).single();
+        if (checkout) {
+          const { data: settings } = await supabase.from("user_settings").select("portopag_api_key").eq("user_id", checkout.user_id).maybeSingle();
+          if (settings?.portopag_api_key) apiKey = decryptApiKey(settings.portopag_api_key);
+        }
+      }
+      if (apiKey) {
+        const message = timestamp + rawBody;
+        const hmac = crypto.createHmac("sha256", apiKey);
+        hmac.update(message);
+        const computed = hmac.digest("hex");
+        try {
+          const sigBuf = Buffer.from(signature, "hex");
+          const compBuf = Buffer.from(computed, "hex");
+          if (sigBuf.length !== compBuf.length || !crypto.timingSafeEqual(sigBuf, compBuf)) {
+            return res.status(401).json({ error: "Assinatura inválida" });
+          }
+        } catch {
+          return res.status(401).json({ error: "Assinatura inválida" });
+        }
+      }
+    }
+
+    if (event === "payment.paid") {
+      const paidAt = payload.paid_at || new Date().toISOString();
+      await supabase.from("sales").update({ status: "paid", paid_at: paidAt }).eq("id", sale.id);
+      log("Webhook: venda " + sale.id + " marcada como paga (transaction_id=" + txnId + ")");
+    } else if (event === "payment.expired") {
+      await supabase.from("sales").update({ status: "expired" }).eq("id", sale.id);
+      log("Webhook: venda " + sale.id + " marcada como expirada (transaction_id=" + txnId + ")");
+    } else if (event === "payment.failed") {
+      await supabase.from("sales").update({ status: "cancelled" }).eq("id", sale.id);
+      log("Webhook: venda " + sale.id + " marcada como cancelada (transaction_id=" + txnId + ")");
+    }
+
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    console.error("Erro webhook PortoPag:", err);
+    return res.status(500).json({ error: "Erro interno" });
+  }
+});
+
 app.use(express.json());
 
 // Helper para fazer requests HTTP sem depender de fetch global
@@ -473,22 +554,30 @@ app.post("/api/add-vercel-domain", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith("Bearer ") || !supabase) return res.status(401).json({ error: "Não autorizado" });
   const token = auth.slice(7);
-  const { domain } = req.body || {};
-  const domainName = (domain || "").trim().toLowerCase();
+  const { domain, checkoutId } = req.body || {};
+  const domainName = (domain || "").trim().toLowerCase().replace(/^https?:\/\//, "");
   if (!domainName) return res.status(400).json({ error: "Domínio obrigatório" });
   if (!VERCEL_API_TOKEN || !VERCEL_PROJECT_ID) {
-    return res.status(503).json({ error: "Integração Vercel não configurada. Defina VERCEL_API_TOKEN e VERCEL_PROJECT_ID no backend." });
+    return res.status(503).json({ error: "Integração Vercel não configurada. Defina VERCEL_API_TOKEN e VERCEL_PROJECT_ID no Railway." });
   }
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) return res.status(401).json({ error: "Não autorizado" });
-    const { data: rows } = await supabase
-      .from("checkouts")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("custom_domain", domainName)
-      .limit(1);
-    if (!rows || rows.length === 0) return res.status(403).json({ error: "Domínio não encontrado em seus checkouts" });
+    let owned = false;
+    if (checkoutId) {
+      const { data: chk } = await supabase.from("checkouts").select("id").eq("id", checkoutId).eq("user_id", user.id).maybeSingle();
+      owned = !!chk;
+    }
+    if (!owned) {
+      const { data: rows } = await supabase
+        .from("checkouts")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("custom_domain", domainName)
+        .limit(1);
+      owned = !!(rows && rows.length > 0);
+    }
+    if (!owned) return res.status(403).json({ error: "Domínio não encontrado em seus checkouts" });
 
     const url = new URL(`https://api.vercel.com/v10/projects/${encodeURIComponent(VERCEL_PROJECT_ID)}/domains`);
     if (VERCEL_TEAM_ID) url.searchParams.set("teamId", VERCEL_TEAM_ID);
@@ -656,6 +745,9 @@ app.post("/api/create-pix-payment", async (req, res) => {
         },
       ],
     };
+    if (API_BASE_URL) {
+      payload.notification_url = `${API_BASE_URL}/api/webhook/portopag`;
+    }
 
     console.log("Enviando para PortoPag:", JSON.stringify(payload, null, 2));
 
@@ -823,9 +915,25 @@ app.get("/api/stats", async (req, res) => {
 });
 
 // Consultar status do pagamento (público)
+// Prioriza o banco (atualizado pelo webhook) para evitar requisições excessivas à PortoPag
 app.get("/api/payment-status/:transactionId", async (req, res) => {
   try {
     const { transactionId } = req.params;
+    if (!transactionId) return res.status(400).json({ success: false, error: "transactionId obrigatório" });
+
+    if (supabase) {
+      const { data: sale } = await supabase
+        .from("sales")
+        .select("status, paid_at")
+        .eq("transaction_id", transactionId)
+        .maybeSingle();
+      if (sale && sale.status === "paid") {
+        return res.json({
+          success: true,
+          data: { status: "paid", paid_at: sale.paid_at },
+        });
+      }
+    }
 
     const response = await makeRequest(
       `${PORTOPAG_API_URL}/public/status/${transactionId}`,
@@ -839,6 +947,15 @@ app.get("/api/payment-status/:transactionId", async (req, res) => {
         success: false,
         error: "Erro ao consultar status",
       });
+    }
+
+    // Se PortoPag retornou pago, atualizar banco como fallback (caso webhook não tenha chegado)
+    const status = (data.data && data.data.status) ? String(data.data.status).toLowerCase() : "";
+    if ((status === "paid" || status === "completed") && supabase) {
+      const { data: existing } = await supabase.from("sales").select("id, status").eq("transaction_id", transactionId).maybeSingle();
+      if (existing && existing.status !== "paid") {
+        await supabase.from("sales").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", existing.id);
+      }
     }
 
     return res.json(data);

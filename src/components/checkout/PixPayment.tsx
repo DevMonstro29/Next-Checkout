@@ -147,7 +147,7 @@ const PixPayment = ({
   const effectiveInstrNumColor = p.instructionNumberColor || primaryColor;
   const effectiveInstrTextColor = p.instructionTextColor || theme?.colors.textMuted || "#6b7280";
 
-  // Poll for payment status every 5 seconds
+  // Poll para status (intervalo maior pois webhook atualiza o banco; payment-status prioriza DB)
   useEffect(() => {
     if (paymentStatus === "paid" || paymentStatus === "expired" || paymentStatus === "cancelled") return;
 
@@ -161,7 +161,7 @@ const PixPayment = ({
       } catch (err) {
         console.error("Error checking payment status:", err);
       }
-    }, 5000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [paymentData.transaction_id, paymentStatus]);

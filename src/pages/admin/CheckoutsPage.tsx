@@ -18,6 +18,7 @@ import {
   FileDigit, Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/api';
 
 const CheckoutsPage = () => {
   const [checkouts, setCheckouts] = useState<Checkout[]>([]);
@@ -200,7 +201,8 @@ const CheckoutsPage = () => {
     if (!domainModalCheckout) return;
     setSavingDomain(true);
     try {
-      const value = domainInput.trim() || null;
+      const raw = domainInput.trim() || null;
+      const value = raw ? raw.toLowerCase().replace(/^https?:\/\//, '') : null;
       const { error } = await supabase
         .from('checkouts')
         .update({ custom_domain: value, domain_verified_at: null, updated_at: new Date().toISOString() })
@@ -218,15 +220,16 @@ const CheckoutsPage = () => {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify({ domain: value }),
+            body: JSON.stringify({ domain: value, checkoutId: domainModalCheckout.id }),
           });
+          const data = await res.json();
           if (res.ok) {
-            toast.success('Domínio salvo e adicionado automaticamente. Configure o CNAME no DNS.');
+            toast.success('Domínio salvo e adicionado na Vercel. Configure o CNAME no DNS.');
           } else {
-            toast.success('Domínio salvo. Configure o CNAME no DNS.');
+            toast.error(data?.error || 'Erro ao adicionar na Vercel. Configure VERCEL_API_TOKEN no Railway.');
           }
         } catch {
-          toast.success('Domínio salvo. Configure o CNAME no DNS.');
+          toast.error('Erro ao adicionar domínio na Vercel. Verifique a conexão com o backend.');
         }
       } else {
         toast.success(value ? 'Domínio salvo. Configure o CNAME no DNS.' : 'Domínio removido.');
