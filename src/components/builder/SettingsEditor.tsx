@@ -1,5 +1,5 @@
 import { useBuilder } from '@/contexts/BuilderContext';
-import { Footprints, Link2, Share2 } from 'lucide-react';
+import { Footprints, Link2, Share2, FileText, Image } from 'lucide-react';
 
 const SettingsEditor = () => {
   const { checkout, updateCheckoutName, updateCheckoutSlug, updateSettings } = useBuilder();
@@ -88,6 +88,34 @@ const SettingsEditor = () => {
           Logo & Branding
         </h4>
         <div className="space-y-3">
+          <div>
+            <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" />
+              Título da página (aba do navegador)
+            </label>
+            <input
+              type="text"
+              value={settings.pageTitle ?? ''}
+              onChange={(e) => updateSettings({ pageTitle: e.target.value || undefined })}
+              placeholder={checkout.name || 'Ex: Minha Loja - Checkout'}
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-lg py-2 px-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+            />
+            <p className="text-[10px] text-neutral-400 mt-1">Deixe vazio para usar o nome do checkout. Evita mostrar &quot;Next Checkout&quot;.</p>
+          </div>
+          <div>
+            <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 flex items-center gap-1.5">
+              <Image className="w-3.5 h-3.5" />
+              Favicon (ícone da aba)
+            </label>
+            <input
+              type="text"
+              value={settings.faviconUrl ?? ''}
+              onChange={(e) => updateSettings({ faviconUrl: e.target.value || undefined })}
+              placeholder="/favicon.png ou URL completa"
+              className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-lg py-2 px-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
+            />
+            <p className="text-[10px] text-neutral-400 mt-1">URL do ícone. Deixe vazio para manter o padrão.</p>
+          </div>
           <div>
             <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 block">URL do Logo</label>
             <input

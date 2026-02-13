@@ -33,6 +33,10 @@ export interface CheckoutTheme {
 // --- Settings ---
 export interface CheckoutSettings {
   logoUrl: string;
+  /** Título da página (aba do navegador). Se vazio, usa o nome do checkout. */
+  pageTitle?: string;
+  /** URL do favicon (ícone da aba). Se vazio, não altera o padrão. */
+  faviconUrl?: string;
   showSecurityBadge: boolean;
   securityText: string;
   paymentMethods: string[];

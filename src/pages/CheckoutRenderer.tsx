@@ -107,6 +107,35 @@ const CheckoutRenderer = () => {
     if (urlCpf) setFormValues((prev) => ({ ...prev, cpf: decodeURIComponent(urlCpf) }));
   }, []);
 
+  // Atualiza título e favicon da página conforme configuração do checkout
+  useEffect(() => {
+    if (!checkout) return;
+    const s = checkout.settings || {};
+    const title = s.pageTitle?.trim() || checkout.name || 'Checkout';
+    document.title = title;
+
+    const raw = (s.faviconUrl || s.logoUrl || '').trim();
+    const fullFaviconUrl = !raw
+      ? null
+      : raw.startsWith('http')
+        ? raw
+        : raw.startsWith('//')
+          ? `${window.location.protocol}${raw}`
+          : raw.startsWith('/')
+            ? `${window.location.origin}${raw}`
+            : `${window.location.origin}/${raw}`;
+
+    if (fullFaviconUrl) {
+      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = fullFaviconUrl;
+    }
+  }, [checkout]);
+
   const loadCheckout = async () => {
     setLoading(true);
     try {

@@ -28,6 +28,8 @@ export const DEFAULT_THEME: CheckoutTheme = {
 
 export const DEFAULT_SETTINGS: CheckoutSettings = {
   logoUrl: '',
+  pageTitle: '',
+  faviconUrl: '',
   showSecurityBadge: true,
   securityText: 'PAGAMENTO 100% SEGURO',
   paymentMethods: ['pix'],
