@@ -1,5 +1,6 @@
 import { ShieldCheck, Copy, QrCode, Clock } from 'lucide-react';
 import { CheckoutTheme } from '@/types/checkout';
+import { colorWithAlpha } from '@/lib/utils';
 
 interface Props {
   props: Record<string, any>;
@@ -62,7 +63,9 @@ const PixPageElement = ({ props, theme }: Props) => {
   const effectiveTimerBorder = timerBorderColor || `${effectiveTimerColor}30`;
   const effectiveTimerRadius = timerBorderRadius || borderRadius;
   const displayMins = timerDisplayMinutes > 0 ? timerDisplayMinutes : 30;
-  const effectiveTimerOpacity = typeof timerOpacity === 'number' ? Math.max(0, Math.min(1, timerOpacity)) : 1;
+  const timerBgAlpha = typeof timerOpacity === 'number' ? Math.max(0, Math.min(1, timerOpacity)) : 1;
+  const baseTimerBg = (effectiveTimerBg || '').replace(/^#([0-9a-fA-F]{6})[0-9a-fA-F]{0,2}$/, '#$1') || effectiveTimerBg;
+  const effectiveTimerBgWithAlpha = colorWithAlpha(baseTimerBg, timerBgAlpha);
   const effectiveCopyBtnBg = copyButtonBgColor || primaryColor;
   const effectiveCopyBtnText = copyButtonTextColor || theme?.colors.primaryText || '#ffffff';
   const effectiveValueColor = valueColor || primaryColor;
@@ -99,11 +102,10 @@ const PixPageElement = ({ props, theme }: Props) => {
           <div
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold inline-flex"
             style={{
-              backgroundColor: effectiveTimerBg,
+              backgroundColor: effectiveTimerBgWithAlpha,
               color: effectiveTimerColor,
               border: `1px solid ${effectiveTimerBorder}`,
               borderRadius: effectiveTimerRadius,
-              opacity: effectiveTimerOpacity,
             }}
           >
             {showTimerIcon && <Clock className="w-4 h-4 flex-shrink-0" style={{ color: effectiveTimerColor }} />}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
+import { colorWithAlpha } from "@/lib/utils";
 
 interface CountdownTimerProps {
   initialSeconds: number;
@@ -39,10 +40,12 @@ const CountdownTimer = ({
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   const color = timerColor || "#22c55e";
-  const bgColor = timerBgColor || `${color}20`;
+  const rawBgColor = timerBgColor || `${color}20`;
+  const bgAlpha = typeof timerOpacity === 'number' ? Math.max(0, Math.min(1, timerOpacity)) : 1;
+  const baseBg = rawBgColor.replace(/^#([0-9a-fA-F]{6})[0-9a-fA-F]{0,2}$/, '#$1') || rawBgColor;
+  const bgColor = colorWithAlpha(baseBg, bgAlpha);
   const borderColor = timerBorderColor || `${color}30`;
   const radius = timerBorderRadius || "12px";
-  const opacity = typeof timerOpacity === 'number' ? Math.max(0, Math.min(1, timerOpacity)) : 1;
 
   return (
     <div
@@ -51,7 +54,6 @@ const CountdownTimer = ({
         backgroundColor: bgColor,
         border: `1px solid ${borderColor}`,
         borderRadius: radius,
-        opacity,
       }}
     >
       {showTimerIcon && <Clock className="w-4 h-4 flex-shrink-0" style={{ color }} />}

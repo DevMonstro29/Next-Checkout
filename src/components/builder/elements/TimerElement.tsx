@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { CheckoutTheme } from '@/types/checkout';
+import { colorWithAlpha } from '@/lib/utils';
 
 const TIMER_BAR_HEIGHT = 52;
 
@@ -21,7 +22,8 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
     opacity,
   } = props;
 
-  const effectiveOpacity = typeof opacity === 'number' ? Math.max(0, Math.min(1, opacity)) : 1;
+  const bgAlpha = typeof opacity === 'number' ? Math.max(0, Math.min(1, opacity)) : 1;
+  const backgroundColorWithAlpha = colorWithAlpha(backgroundColor, bgAlpha);
 
   const radius = theme?.borderRadius || '12px';
   const totalSeconds = minutes * 60;
@@ -61,8 +63,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
             left: 0,
             right: 0,
             zIndex: 9999,
-            backgroundColor,
-            opacity: effectiveOpacity,
+            backgroundColor: backgroundColorWithAlpha,
             borderRadius: isBuilder ? radius : 0,
             minHeight: TIMER_BAR_HEIGHT,
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -89,8 +90,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
             left: 0,
             right: 0,
             zIndex: 9999,
-            backgroundColor,
-            opacity: effectiveOpacity,
+            backgroundColor: backgroundColorWithAlpha,
             borderRadius: isBuilder ? radius : 0,
             minHeight: TIMER_BAR_HEIGHT,
             boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
@@ -109,7 +109,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
   return (
     <div
       className="p-3 flex items-center justify-center gap-2"
-      style={{ backgroundColor, opacity: effectiveOpacity, borderRadius: radius }}
+      style={{ backgroundColor: backgroundColorWithAlpha, borderRadius: radius }}
     >
       {showIcon && <Clock className="w-4 h-4" style={{ color: textColor }} />}
       <span className="text-sm font-semibold" style={{ color: textColor }}>
