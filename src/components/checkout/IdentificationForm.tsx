@@ -43,10 +43,21 @@ const IdentificationForm = ({
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const urlName = params.get("name");
-    const urlCpf = params.get("cpf");
-    if (urlName) setName(decodeURIComponent(urlName));
-    if (urlCpf) setCpf(formatCpf(decodeURIComponent(urlCpf)));
+    const get = (keys: string[]) => {
+      for (const k of keys) {
+        const v = params.get(k);
+        if (v) return decodeURIComponent(v).trim();
+      }
+      return "";
+    };
+    const nameVal = get(["name", "nome"]);
+    if (nameVal) setName(nameVal);
+    const emailVal = get(["email", "mail"]);
+    if (emailVal) setEmail(emailVal);
+    const cpfVal = get(["cpf", "documento"]);
+    if (cpfVal) setCpf(formatCpf(cpfVal));
+    const phoneVal = get(["phone", "telefone", "tel"]);
+    if (phoneVal) setPhone(formatPhone(phoneVal));
   }, []);
 
   const formatPhone = (value: string) => {

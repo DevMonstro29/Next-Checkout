@@ -14,9 +14,14 @@ interface PixPaymentData {
   transaction_id: string;
   pix_code: string;
   pix_qr_code: string;
-  amount: string;
+  amount: string | number;
   status: string;
   expires_at: string;
+}
+
+function formatAmountBRL(cents: string | number): string {
+  const n = typeof cents === "string" ? parseInt(cents, 10) : Math.round(Number(cents) || 0);
+  return (n / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 interface PixPageCustomProps {
@@ -344,7 +349,7 @@ const PixPayment = ({
           style={{ backgroundColor: effectiveValueBg, border: `1px solid ${effectiveValueColor}20`, borderRadius }}
         >
           <span className="text-xs" style={{ color: mutedColor }}>{valueLabelText}</span>
-          <span className="font-bold text-lg" style={{ color: effectiveValueColor }}>R$ {paymentData.amount}</span>
+          <span className="font-bold text-lg" style={{ color: effectiveValueColor }}>R$ {formatAmountBRL(paymentData.amount)}</span>
         </div>
 
         {securityMessage && (
@@ -391,7 +396,7 @@ const PixPayment = ({
             </div>
             <div className="flex justify-between">
               <span className="text-sm" style={{ color: mutedColor }}>Valor:</span>
-              <span className="text-sm font-bold" style={{ color: effectiveValueColor }}>R$ {paymentData.amount}</span>
+              <span className="text-sm font-bold" style={{ color: effectiveValueColor }}>R$ {formatAmountBRL(paymentData.amount)}</span>
             </div>
           </div>
         </div>

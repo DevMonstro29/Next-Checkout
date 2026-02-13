@@ -16,6 +16,11 @@ interface Sale {
   paid_at: string | null;
   checkout_name?: string;
   checkout_slug?: string;
+  utm_source?: string | null;
+  utm_campaign?: string | null;
+  utm_medium?: string | null;
+  utm_content?: string | null;
+  utm_term?: string | null;
 }
 
 const formatCurrency = (cents: number) =>
@@ -71,7 +76,10 @@ const VendasPage = () => {
       (s.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (s.customer_email || '').toLowerCase().includes(search.toLowerCase()) ||
       (s.transaction_id || '').toLowerCase().includes(search.toLowerCase()) ||
-      (s.checkout_name || '').toLowerCase().includes(search.toLowerCase())
+      (s.checkout_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.utm_source || '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.utm_campaign || '').toLowerCase().includes(search.toLowerCase()) ||
+      (s.utm_medium || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -138,23 +146,24 @@ const VendasPage = () => {
 
         {!loading && filtered.length > 0 && (
           <>
-            <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white/60 dark:bg-neutral-800/60 px-4 py-3 grid grid-cols-12 gap-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider min-w-[560px]">
-              <span className="col-span-4 flex items-center gap-1">
+            <div className="border-b border-neutral-200 dark:border-neutral-700 bg-white/60 dark:bg-neutral-800/60 px-4 py-3 grid grid-cols-12 gap-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider min-w-[640px]">
+              <span className="col-span-3 flex items-center gap-1">
                 Cliente / Pedido
                 <ArrowUpDown className="w-3 h-3 opacity-50" />
               </span>
               <span className="col-span-2">Data</span>
               <span className="col-span-2">Checkout</span>
+              <span className="col-span-2">Campanha</span>
               <span className="col-span-2 text-right">Valor</span>
-              <span className="col-span-2 text-right">Status</span>
+              <span className="col-span-1 text-right">Status</span>
             </div>
             <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
               {filtered.map((sale) => (
                 <div
                   key={sale.id}
-                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center text-sm hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors min-w-[560px]"
+                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center text-sm hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors min-w-[640px]"
                 >
-                  <div className="col-span-4 min-w-0">
+                  <div className="col-span-3 min-w-0">
                     <p className="font-medium text-neutral-900 dark:text-white truncate">
                       {sale.customer_name || '—'}
                     </p>
@@ -168,10 +177,19 @@ const VendasPage = () => {
                   <div className="col-span-2 text-neutral-600 dark:text-neutral-400 truncate" title={sale.checkout_name || ''}>
                     {sale.checkout_name || '—'}
                   </div>
+                  <div className="col-span-2 min-w-0" title={[sale.utm_source, sale.utm_campaign, sale.utm_medium, sale.utm_content, sale.utm_term].filter(Boolean).join(' | ')}>
+                    {(sale.utm_source || sale.utm_campaign) ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-brand-500/10 text-brand-600 dark:text-brand-400 truncate max-w-full">
+                        {[sale.utm_source, sale.utm_campaign].filter(Boolean).slice(0, 2).join(' · ')}
+                      </span>
+                    ) : (
+                      <span className="text-neutral-400 dark:text-neutral-500">—</span>
+                    )}
+                  </div>
                   <div className="col-span-2 text-right font-medium text-neutral-900 dark:text-white">
                     {formatCurrency(sale.amount_cents)}
                   </div>
-                  <div className="col-span-2 text-right">
+                  <div className="col-span-1 text-right">
                     <span
                       className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusClass[sale.status] || 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}
                     >

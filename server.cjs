@@ -861,7 +861,7 @@ app.post("/api/create-pix-payment", async (req, res) => {
       });
     }
 
-    // Registrar venda no painel (tabela sales)
+    // Registrar venda no painel (tabela sales) com UTM para campanha
     if (supabase && checkoutId) {
       try {
         await supabase.from("sales").insert({
@@ -873,6 +873,11 @@ app.post("/api/create-pix-payment", async (req, res) => {
           amount_cents: amountCentsVal,
           product_name: productName || title || null,
           status: "pending",
+          utm_source: utm_source && String(utm_source).slice(0, 500) || null,
+          utm_campaign: utm_campaign && String(utm_campaign).slice(0, 500) || null,
+          utm_medium: utm_medium && String(utm_medium).slice(0, 500) || null,
+          utm_content: utm_content && String(utm_content).slice(0, 500) || null,
+          utm_term: utm_term && String(utm_term).slice(0, 500) || null,
         });
       } catch (insertErr) {
         console.error("Erro ao registrar venda (sales):", insertErr);
@@ -935,7 +940,7 @@ app.get("/api/sales", async (req, res) => {
 
     const { data: sales, error } = await supabase
       .from("sales")
-      .select("id, checkout_id, transaction_id, customer_name, customer_email, amount_cents, product_name, status, created_at, paid_at")
+      .select("id, checkout_id, transaction_id, customer_name, customer_email, amount_cents, product_name, status, created_at, paid_at, utm_source, utm_campaign, utm_medium, utm_content, utm_term")
       .in("checkout_id", checkoutIds)
       .order("created_at", { ascending: false });
 

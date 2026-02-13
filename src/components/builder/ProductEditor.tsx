@@ -3,6 +3,30 @@ import { ShippingOption } from '@/types/checkout';
 import { Plus, Trash2, Package, Truck } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
+function parseBRLToCents(str: string): number {
+  if (!str || typeof str !== 'string') return 0;
+  const s = str.replace(/\s/g, '');
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+  let cleaned: string;
+  if (hasComma && hasDot) {
+    cleaned = s.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    cleaned = s.replace(',', '.');
+  } else if (hasDot) {
+    cleaned = s;
+  } else {
+    cleaned = s + '.00';
+  }
+  const num = parseFloat(cleaned);
+  if (Number.isNaN(num) || num < 0) return 0;
+  return Math.round(num * 100);
+}
+
+function formatCentsToBRL(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 const ProductEditor = () => {
   const { products, updateProduct, addProduct, removeProduct } = useBuilder();
 
@@ -117,16 +141,15 @@ const ProductEditor = () => {
           </div>
 
           <div>
-            <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 block">Preço (centavos)</label>
+            <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 block">Preço</label>
             <input
-              type="number"
-              value={product.amount_cents}
-              onChange={(e) => updateProduct(product.id, { amount_cents: parseInt(e.target.value) || 0 })}
+              type="text"
+              inputMode="decimal"
+              value={formatCentsToBRL(product.amount_cents)}
+              onChange={(e) => updateProduct(product.id, { amount_cents: parseBRLToCents(e.target.value) })}
+              placeholder="0,00"
               className="w-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-600 rounded-lg py-2 px-3 text-neutral-900 dark:text-white text-sm focus:outline-none focus:border-brand-500"
             />
-            <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-1">
-              = R$ {(product.amount_cents / 100).toFixed(2).replace('.', ',')}
-            </p>
           </div>
 
           <div>
@@ -212,15 +235,17 @@ const ProductEditor = () => {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-neutral-400 dark:text-neutral-500 text-[11px] mb-0.5 block">Preço (centavos)</label>
+                      <label className="text-neutral-400 dark:text-neutral-500 text-[11px] mb-0.5 block">Preço</label>
                       <input
-                        type="number"
-                        value={opt.price_cents}
-                        onChange={(e) => updateShippingOption(product.id, opt.id, { price_cents: parseInt(e.target.value) || 0 })}
+                        type="text"
+                        inputMode="decimal"
+                        value={opt.price_cents === 0 ? '' : formatCentsToBRL(opt.price_cents)}
+                        onChange={(e) => updateShippingOption(product.id, opt.id, { price_cents: parseBRLToCents(e.target.value) })}
+                        placeholder="Grátis ou 0,00"
                         className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded py-1.5 px-2 text-neutral-900 dark:text-white text-xs focus:outline-none focus:border-blue-500"
                       />
                       <p className="text-neutral-400 dark:text-neutral-600 text-[10px] mt-0.5">
-                        {opt.price_cents === 0 ? 'Grátis' : `R$ ${(opt.price_cents / 100).toFixed(2).replace('.', ',')}`}
+                        {opt.price_cents === 0 ? 'Grátis' : `R$ ${formatCentsToBRL(opt.price_cents)}`}
                       </p>
                     </div>
                     <div>

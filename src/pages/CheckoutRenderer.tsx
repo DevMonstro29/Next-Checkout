@@ -99,12 +99,76 @@ const CheckoutRenderer = () => {
     if (slug || window.location.pathname === '/') loadCheckout();
   }, [slug]);
 
+  // Preenchimento automático a partir dos parâmetros da URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const urlName = params.get('name');
-    const urlCpf = params.get('cpf');
-    if (urlName) setFormValues((prev) => ({ ...prev, name: decodeURIComponent(urlName) }));
-    if (urlCpf) setFormValues((prev) => ({ ...prev, cpf: decodeURIComponent(urlCpf) }));
+    const get = (keys: string[]) => {
+      for (const k of keys) {
+        const v = params.get(k);
+        if (v) return decodeURIComponent(v).trim();
+      }
+      return '';
+    };
+    const next: Record<string, string> = {};
+    const nameVal = get(['name', 'nome']);
+    if (nameVal) {
+      next.name = nameVal;
+      setCustomerName(nameVal);
+    }
+    const emailVal = get(['email', 'mail']);
+    if (emailVal) next.email = emailVal;
+    const cpfVal = get(['cpf', 'documento']);
+    if (cpfVal) {
+      const digits = cpfVal.replace(/\D/g, '').slice(0, 11);
+      if (digits.length <= 3) next.cpf = digits;
+      else if (digits.length <= 6) next.cpf = `${digits.slice(0, 3)}.${digits.slice(3)}`;
+      else if (digits.length <= 9) next.cpf = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+      else next.cpf = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    }
+    const phoneVal = get(['phone', 'telefone', 'tel']);
+    if (phoneVal) {
+      const digits = phoneVal.replace(/\D/g, '').slice(0, 11);
+      if (digits.length <= 2) next.phone = `(${digits}`;
+      else if (digits.length <= 7) next.phone = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+      else next.phone = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (Object.keys(next).length > 0) {
+      setFormValues((prev) => ({ ...prev, ...next }));
+    }
+    const cepVal = get(['cep', 'zipcode']);
+    if (cepVal) {
+      const digits = cepVal.replace(/\D/g, '').slice(0, 8);
+      const formatted = digits.length <= 5 ? digits : `${digits.slice(0, 5)}-${digits.slice(5)}`;
+      setAddress((prev) => ({ ...prev, cep: formatted }));
+    }
+    const ruaVal = get(['rua', 'street', 'logradouro', 'endereco']);
+    if (ruaVal) setAddress((prev) => ({ ...prev, rua: ruaVal }));
+    const numVal = get(['numero', 'number', 'num']);
+    if (numVal) setAddress((prev) => ({ ...prev, numero: numVal }));
+    const compVal = get(['complemento', 'complement']);
+    if (compVal) setAddress((prev) => ({ ...prev, complemento: compVal }));
+    const bairroVal = get(['bairro', 'neighborhood']);
+    if (bairroVal) setAddress((prev) => ({ ...prev, bairro: bairroVal }));
+    const cidadeVal = get(['cidade', 'city']);
+    if (cidadeVal) setAddress((prev) => ({ ...prev, cidade: cidadeVal }));
+    const estadoVal = get(['estado', 'state', 'uf']);
+    if (estadoVal) setAddress((prev) => ({ ...prev, estado: estadoVal }));
+
+    // Salvar UTMs no localStorage quando presentes na URL (para enviar na geração do PIX)
+    const utmKeys = ['utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term'];
+    const hasUtm = utmKeys.some((k) => params.get(k));
+    if (hasUtm) {
+      try {
+        const stored: Record<string, string> = {};
+        utmKeys.forEach((k) => {
+          const v = params.get(k);
+          if (v) stored[k] = decodeURIComponent(v).trim();
+        });
+        if (Object.keys(stored).length > 0) {
+          localStorage.setItem('checkout_utm_params', JSON.stringify(stored));
+        }
+      } catch {}
+    }
   }, []);
 
   // Atualiza título e favicon da página conforme configuração do checkout
@@ -400,15 +464,19 @@ const CheckoutRenderer = () => {
     try {
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
       const s = checkout.settings;
-      const utmParams = s?.utmEnabled
-        ? {
-            utm_source: params.get('utm_source') ?? s.utmSource ?? undefined,
-            utm_campaign: params.get('utm_campaign') ?? s.utmCampaign ?? undefined,
-            utm_medium: params.get('utm_medium') ?? s.utmMedium ?? undefined,
-            utm_content: params.get('utm_content') ?? s.utmContent ?? undefined,
-            utm_term: params.get('utm_term') ?? s.utmTerm ?? undefined,
-          }
-        : {};
+      // UTM: priorizar localStorage (salvos no primeiro acesso), depois URL, depois settings
+      let storedUtm: Record<string, string> = {};
+      try {
+        const raw = localStorage.getItem('checkout_utm_params');
+        if (raw) storedUtm = JSON.parse(raw) || {};
+      } catch {}
+      const utmParams = {
+        utm_source: storedUtm.utm_source ?? params.get('utm_source') ?? s?.utmSource ?? undefined,
+        utm_campaign: storedUtm.utm_campaign ?? params.get('utm_campaign') ?? s?.utmCampaign ?? undefined,
+        utm_medium: storedUtm.utm_medium ?? params.get('utm_medium') ?? s?.utmMedium ?? undefined,
+        utm_content: storedUtm.utm_content ?? params.get('utm_content') ?? s?.utmContent ?? undefined,
+        utm_term: storedUtm.utm_term ?? params.get('utm_term') ?? s?.utmTerm ?? undefined,
+      };
 
       setCustomerData({ name, email, cpf, phone });
 
