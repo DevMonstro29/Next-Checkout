@@ -114,7 +114,8 @@ try {
 var app = express();
 var PORT = process.env.PORT || 8080;
 
-const PORTOPAG_API_URL = "https://api.portopag.com/api/v1";
+// API PortoPag: docs.portopag.com - POST /payments, GET /public/status/:id
+const PORTOPAG_API_URL = (process.env.PORTOPAG_API_URL || "https://api.portopag.com/api/v1").replace(/\/$/, "");
 const PORTOPAG_API_KEY = process.env.PORTOPAG_API_KEY || "";
 
 // Supabase (para buscar API key do usuário)
@@ -168,8 +169,8 @@ app.use(cors({
 app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const rawBody = (req.body && Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "") || "{}";
-    const timestamp = (req.headers["x-pagou-timestamp"] || req.headers["x-portopag-timestamp"] || "").toString();
-    const signature = (req.headers["x-pagou-signature"] || req.headers["x-portopag-signature"] || "").toString();
+    const timestamp = (req.headers["x-portopag-timestamp"] || "").toString();
+    const signature = (req.headers["x-portopag-signature"] || "").toString();
     let payload;
     try {
       payload = JSON.parse(rawBody);
@@ -177,7 +178,12 @@ app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), asy
       return res.status(400).json({ error: "JSON inválido" });
     }
     const event = (payload.event || payload.event_name || payload.name || "").toLowerCase();
-    const txnId = payload.transaction_id || (payload.data && (payload.data.transaction_id || payload.data.transactionid)) || payload.id || "";
+    // PortoPag webhook: event, transaction_id no root (docs.portopag.com)
+    const txnId =
+      payload.transaction_id ||
+      (payload.data && (payload.data.id || payload.data.transaction_id || payload.data.transactionid)) ||
+      payload.id ||
+      "";
 
     if (!txnId) {
       return res.status(400).json({ error: "transaction_id ausente" });
@@ -224,8 +230,9 @@ app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), asy
       }
     }
 
+    // PortoPag: payment.paid, payment.expired, payment.failed (docs.portopag.com)
     if (event === "payment.paid") {
-      const paidAt = payload.paid_at || new Date().toISOString();
+      const paidAt = payload.paid_at || (payload.data && payload.data.paid_at) || new Date().toISOString();
       await supabase.from("sales").update({ status: "paid", paid_at: paidAt }).eq("id", sale.id);
       log("Webhook: venda " + sale.id + " marcada como paga (transaction_id=" + txnId + ")");
     } else if (event === "payment.expired") {
@@ -690,6 +697,7 @@ app.post("/api/save-portopag-key", async (req, res) => {
 });
 
 // Criar pagamento PIX
+// amountCents = total do checkout (produto×quantidade + frete + order bumps)
 app.post("/api/create-pix-payment", async (req, res) => {
   try {
     const { checkoutId, name, email, cpf, phone, productName, amountCents, utm_source, utm_campaign, utm_medium, utm_content, utm_term } = req.body;
@@ -729,30 +737,52 @@ app.post("/api/create-pix-payment", async (req, res) => {
     }
 
     const cleanCpf = (cpf || "").replace(/\D/g, "");
-    const cleanPhone = (phone || "").replace(/\D/g, "");
-    const amount = parseInt(amountCents, 10) || 5890;
+    const cleanPhone = (phone || "").replace(/\D/g, "").slice(0, 11) || "11999999999";
+    // amountCents = total (produto×qtd + frete + order bumps) — enviado pelo frontend
+    const amountCentsVal = parseInt(amountCents, 10) || 0;
     const title = productName || "Taxa Transacional";
 
+    if (!amountCentsVal || amountCentsVal < 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Valor total inválido ou abaixo do mínimo (R$ 1,00).",
+      });
+    }
+    if (!cleanCpf || cleanCpf.length !== 11) {
+      return res.status(400).json({
+        success: false,
+        error: "CPF inválido. Informe um CPF com 11 dígitos.",
+      });
+    }
+    if (cleanPhone.length !== 11) {
+      return res.status(400).json({
+        success: false,
+        error: "Telefone inválido. Informe com 11 dígitos (ex: 11999999999).",
+      });
+    }
+
+    // PortoPag (docs.portopag.com): POST /payments - amount, customer, paymentMethod, items
+    // amount deve ser igual à soma de items[].unitPrice × items[].quantity
     const payload = {
-      amount: amount,
+      amount: amountCentsVal,
       customer: {
-        name,
-        email: email || `${cleanCpf}@semmail.com`,
+        name: (name || "Cliente").substring(0, 100),
+        email: (email || `${cleanCpf}@semmail.com`).substring(0, 100),
         cpf: cleanCpf,
         phone: cleanPhone,
       },
       paymentMethod: "pix",
       items: [
         {
-          unitPrice: amount,
-          title: title,
+          unitPrice: amountCentsVal,
+          title: title.substring(0, 200),
           quantity: 1,
           tangible: false,
         },
       ],
     };
     if (API_BASE_URL) {
-      payload.notification_url = `${API_BASE_URL}/api/webhook/portopag`;
+      payload.postbackUrl = `${API_BASE_URL}/api/webhook/portopag`;
     }
 
     console.log("Enviando para PortoPag:", JSON.stringify(payload, null, 2));
@@ -769,13 +799,26 @@ app.post("/api/create-pix-payment", async (req, res) => {
     const data = response.json;
     console.log("Resposta PortoPag:", JSON.stringify(data, null, 2));
 
-    if (!response.ok || !data.success) {
+    if (!response.ok) {
+      const err = data?.error;
+      const errMsg = (err && (err.message || err.details || err.code)) || data?.message || "Erro ao criar pagamento";
       return res.status(response.status).json({
         success: false,
-        error:
-          data.error?.message ||
-          data.error?.details ||
-          "Erro ao criar pagamento",
+        error: typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg),
+      });
+    }
+
+    // PortoPag resposta 201: success, data { id, transaction_id, pix_code, pix_qr_code, status, expires_at }
+    const result = data.data || data;
+    const transactionId = result.transaction_id || result.id || "";
+    const pixCode = result.pix_code || "";
+    const pixQrCode = result.pix_qr_code || "";
+
+    if (!transactionId || !pixCode) {
+      console.error("Resposta sem transaction_id ou pix_code:", data);
+      return res.status(502).json({
+        success: false,
+        error: "API não retornou código PIX. Verifique a resposta em logs.",
       });
     }
 
@@ -784,11 +827,11 @@ app.post("/api/create-pix-payment", async (req, res) => {
       try {
         await supabase.from("sales").insert({
           checkout_id: checkoutId,
-          transaction_id: data.data.transaction_id || "",
+          transaction_id: transactionId,
           customer_name: name || null,
           customer_email: email || null,
-          customer_cpf: (cpf || "").replace(/\D/g, "") || null,
-          amount_cents: amount,
+          customer_cpf: cleanCpf || null,
+          amount_cents: amountCentsVal,
           product_name: productName || title || null,
           status: "pending",
         });
@@ -800,12 +843,12 @@ app.post("/api/create-pix-payment", async (req, res) => {
     return res.json({
       success: true,
       data: {
-        transaction_id: data.data.transaction_id,
-        pix_code: data.data.pix_code,
-        pix_qr_code: data.data.pix_qr_code,
-        amount: data.data.amount,
-        status: data.data.status,
-        expires_at: data.data.expires_at,
+        transaction_id: transactionId,
+        pix_code: pixCode,
+        pix_qr_code: pixQrCode,
+        amount: amountCentsVal,
+        status: result.status || "pending",
+        expires_at: result.expires_at || null,
       },
     });
   } catch (error) {
@@ -921,12 +964,13 @@ app.get("/api/stats", async (req, res) => {
 });
 
 // Consultar status do pagamento (público)
-// Prioriza o banco (atualizado pelo webhook) para evitar requisições excessivas à PortoPag
+// PortoPag: GET /public/status/:transaction_id — endpoint público, SEM autenticação
 app.get("/api/payment-status/:transactionId", async (req, res) => {
   try {
     const { transactionId } = req.params;
     if (!transactionId) return res.status(400).json({ success: false, error: "transactionId obrigatório" });
 
+    // Prioriza o banco (atualizado pelo webhook)
     if (supabase) {
       const { data: sale } = await supabase
         .from("sales")
@@ -941,30 +985,40 @@ app.get("/api/payment-status/:transactionId", async (req, res) => {
       }
     }
 
-    const response = await makeRequest(
-      `${PORTOPAG_API_URL}/public/status/${transactionId}`,
-      { method: "GET" },
-    );
+    // PortoPag (docs.portopag.com): GET /public/status/:transaction_id — sem Authorization
+    const response = await makeRequest(`${PORTOPAG_API_URL}/public/status/${transactionId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
     const data = response.json;
 
-    if (!response.ok || !data.success) {
-      return res.status(response.status).json({
-        success: false,
-        error: "Erro ao consultar status",
+    if (!response.ok || !data?.success) {
+      return res.json({
+        success: true,
+        data: { status: "pending", paid_at: null },
       });
     }
 
-    // Se PortoPag retornou pago, atualizar banco como fallback (caso webhook não tenha chegado)
-    const status = (data.data && data.data.status) ? String(data.data.status).toLowerCase() : "";
-    if ((status === "paid" || status === "completed") && supabase) {
+    // PortoPag: data { transaction_id, status, amount, created_at, expires_at }
+    const result = data.data || data;
+    const apiStatus = (result.status || "").toLowerCase();
+    const isPaid = apiStatus === "paid";
+
+    if (isPaid && supabase) {
       const { data: existing } = await supabase.from("sales").select("id, status").eq("transaction_id", transactionId).maybeSingle();
       if (existing && existing.status !== "paid") {
         await supabase.from("sales").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", existing.id);
       }
     }
 
-    return res.json(data);
+    return res.json({
+      success: true,
+      data: {
+        status: isPaid ? "paid" : "pending",
+        paid_at: isPaid ? new Date().toISOString() : null,
+      },
+    });
   } catch (error) {
     console.error("Erro ao consultar status:", error);
     return res.status(500).json({
