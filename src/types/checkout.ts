@@ -221,6 +221,8 @@ export interface TimerProps {
   showIcon: boolean;
   /** 'inline' = no fluxo da página (padrão); 'sticky_top' = fixo no topo; 'sticky_bottom' = fixo na base */
   timerPosition?: 'inline' | 'sticky_top' | 'sticky_bottom';
+  /** Transparência do cronômetro (0 a 1). 1 = opaco, 0.5 = 50%, 0 = invisível. Padrão 1. */
+  opacity?: number;
 }
 
 export interface ButtonProps {

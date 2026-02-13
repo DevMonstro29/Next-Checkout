@@ -10,6 +10,8 @@ interface CountdownTimerProps {
   timerBorderRadius?: string;
   timerLabel?: string;
   showTimerIcon?: boolean;
+  /** Transparência (0 a 1). 1 = opaco, 0.5 = 50% */
+  timerOpacity?: number;
 }
 
 const CountdownTimer = ({
@@ -21,6 +23,7 @@ const CountdownTimer = ({
   timerBorderRadius,
   timerLabel = "Sua oferta termina em:",
   showTimerIcon = true,
+  timerOpacity,
 }: CountdownTimerProps) => {
   const [seconds, setSeconds] = useState(initialSeconds);
 
@@ -39,6 +42,7 @@ const CountdownTimer = ({
   const bgColor = timerBgColor || `${color}20`;
   const borderColor = timerBorderColor || `${color}30`;
   const radius = timerBorderRadius || "12px";
+  const opacity = typeof timerOpacity === 'number' ? Math.max(0, Math.min(1, timerOpacity)) : 1;
 
   return (
     <div
@@ -47,6 +51,7 @@ const CountdownTimer = ({
         backgroundColor: bgColor,
         border: `1px solid ${borderColor}`,
         borderRadius: radius,
+        opacity,
       }}
     >
       {showTimerIcon && <Clock className="w-4 h-4 flex-shrink-0" style={{ color }} />}

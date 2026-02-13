@@ -18,7 +18,10 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
     label = 'Tempo restante para pagamento',
     showIcon = true,
     timerPosition = 'inline',
+    opacity,
   } = props;
+
+  const effectiveOpacity = typeof opacity === 'number' ? Math.max(0, Math.min(1, opacity)) : 1;
 
   const radius = theme?.borderRadius || '12px';
   const totalSeconds = minutes * 60;
@@ -59,6 +62,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
             right: 0,
             zIndex: 9999,
             backgroundColor,
+            opacity: effectiveOpacity,
             borderRadius: isBuilder ? radius : 0,
             minHeight: TIMER_BAR_HEIGHT,
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -86,6 +90,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
             right: 0,
             zIndex: 9999,
             backgroundColor,
+            opacity: effectiveOpacity,
             borderRadius: isBuilder ? radius : 0,
             minHeight: TIMER_BAR_HEIGHT,
             boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
@@ -104,7 +109,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
   return (
     <div
       className="p-3 flex items-center justify-center gap-2"
-      style={{ backgroundColor, borderRadius: radius }}
+      style={{ backgroundColor, opacity: effectiveOpacity, borderRadius: radius }}
     >
       {showIcon && <Clock className="w-4 h-4" style={{ color: textColor }} />}
       <span className="text-sm font-semibold" style={{ color: textColor }}>

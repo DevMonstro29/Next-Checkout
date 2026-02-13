@@ -38,6 +38,7 @@ const PixPageElement = ({ props, theme }: Props) => {
     showTimerIcon = true,
     timerDisplayMinutes = 0,
     timerCenter = true,
+    timerOpacity,
     copyButtonBgColor = '',
     copyButtonTextColor = '',
     valueColor = '',
@@ -61,6 +62,7 @@ const PixPageElement = ({ props, theme }: Props) => {
   const effectiveTimerBorder = timerBorderColor || `${effectiveTimerColor}30`;
   const effectiveTimerRadius = timerBorderRadius || borderRadius;
   const displayMins = timerDisplayMinutes > 0 ? timerDisplayMinutes : 30;
+  const effectiveTimerOpacity = typeof timerOpacity === 'number' ? Math.max(0, Math.min(1, timerOpacity)) : 1;
   const effectiveCopyBtnBg = copyButtonBgColor || primaryColor;
   const effectiveCopyBtnText = copyButtonTextColor || theme?.colors.primaryText || '#ffffff';
   const effectiveValueColor = valueColor || primaryColor;
@@ -101,6 +103,7 @@ const PixPageElement = ({ props, theme }: Props) => {
               color: effectiveTimerColor,
               border: `1px solid ${effectiveTimerBorder}`,
               borderRadius: effectiveTimerRadius,
+              opacity: effectiveTimerOpacity,
             }}
           >
             {showTimerIcon && <Clock className="w-4 h-4 flex-shrink-0" style={{ color: effectiveTimerColor }} />}

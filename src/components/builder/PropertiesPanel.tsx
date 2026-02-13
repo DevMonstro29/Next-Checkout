@@ -707,6 +707,26 @@ function TimerPropsEditor({ props, onUpdate }: { props: Record<string, any>; onU
       <PropInput label="Minutos" type="number" value={String(props.minutes || 30)} onChange={(v) => onUpdate({ minutes: parseInt(v) || 30 })} />
       <PropColor label="Cor de fundo" value={props.backgroundColor || '#ef4444'} onChange={(v) => onUpdate({ backgroundColor: v })} />
       <PropColor label="Cor do texto" value={props.textColor || '#ffffff'} onChange={(v) => onUpdate({ textColor: v })} />
+      <div>
+        <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 block">Transparência</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={typeof props.opacity === 'number' ? Math.round(props.opacity * 100) : 100}
+            onChange={(e) => {
+              const pct = parseInt(e.target.value, 10);
+              onUpdate({ opacity: pct === 100 ? undefined : pct / 100 });
+            }}
+            className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-600 rounded-lg appearance-none cursor-pointer accent-brand-500"
+          />
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 w-10">
+            {typeof props.opacity === 'number' ? Math.round(props.opacity * 100) : 100}%
+          </span>
+        </div>
+        <p className="text-[10px] text-neutral-400 mt-0.5">0% = invisível, 100% = opaco (padrão)</p>
+      </div>
       <PropInput label="Label" value={props.label || ''} onChange={(v) => onUpdate({ label: v })} />
       <PropToggle label="Mostrar ícone" value={props.showIcon ?? true} onChange={(v) => onUpdate({ showIcon: v })} />
     </div>
@@ -933,6 +953,25 @@ export function PixPagePropsEditor({ props, onUpdate }: { props: Record<string, 
       <PropColor label="Cor de fundo" value={props.timerBgColor || ''} onChange={(v) => onUpdate({ timerBgColor: v })} />
       <PropColor label="Cor da borda" value={props.timerBorderColor || ''} onChange={(v) => onUpdate({ timerBorderColor: v })} />
       <PropInput label="Border radius do timer" value={props.timerBorderRadius || ''} onChange={(v) => onUpdate({ timerBorderRadius: v })} placeholder="ex: 12px (vazio = tema)" />
+      <div>
+        <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 block">Transparência do timer</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={typeof props.timerOpacity === 'number' ? Math.round(props.timerOpacity * 100) : 100}
+            onChange={(e) => {
+              const pct = parseInt(e.target.value, 10);
+              onUpdate({ timerOpacity: pct === 100 ? undefined : pct / 100 });
+            }}
+            className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-600 rounded-lg appearance-none cursor-pointer accent-brand-500"
+          />
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 w-10">
+            {typeof props.timerOpacity === 'number' ? Math.round(props.timerOpacity * 100) : 100}%
+          </span>
+        </div>
+      </div>
 
       <h4 className="text-neutral-700 dark:text-neutral-300 text-xs font-semibold mt-4">Cores gerais</h4>
       <PropColor label="Cor do ícone do cabeçalho" value={props.headerIconColor || ''} onChange={(v) => onUpdate({ headerIconColor: v })} />

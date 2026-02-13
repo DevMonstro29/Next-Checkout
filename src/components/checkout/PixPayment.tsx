@@ -140,6 +140,7 @@ const PixPayment = ({
   const effectiveTimerRadius = p.timerBorderRadius || "12px";
   const timerLabel = p.timerLabel ?? "Sua oferta termina em:";
   const showTimerIcon = p.showTimerIcon ?? true;
+  const timerOpacity = typeof p.timerOpacity === 'number' ? p.timerOpacity : undefined;
   const effectiveCopyBtnBg = p.copyButtonBgColor || primaryColor;
   const effectiveCopyBtnText = p.copyButtonTextColor || primaryTextColor;
   const effectiveValueColor = p.valueColor || primaryColor;
@@ -283,6 +284,7 @@ const PixPayment = ({
               timerBorderRadius={effectiveTimerRadius}
               timerLabel={timerLabel}
               showTimerIcon={showTimerIcon}
+              timerOpacity={timerOpacity}
             />
           </div>
         )}
