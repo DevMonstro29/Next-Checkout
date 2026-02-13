@@ -592,8 +592,14 @@ app.post("/api/add-vercel-domain", async (req, res) => {
     const vercelData = await vercelRes.json().catch(() => ({}));
 
     if (!vercelRes.ok) {
-      const errMsg = vercelData.error?.message || vercelData.message || vercelRes.statusText;
-      if (vercelRes.status === 400 && (errMsg.includes("already") || vercelData.error?.code === "domain_already_in_use")) {
+      const errMsg = vercelData.error?.message || vercelData.message || vercelRes.statusText || "";
+      const errLower = String(errMsg).toLowerCase();
+      const alreadyConfigured =
+        vercelData.error?.code === "domain_already_in_use" ||
+        errLower.includes("already") ||
+        errLower.includes("already in use") ||
+        errLower.includes("já está em uso");
+      if (alreadyConfigured) {
         return res.json({ success: true, message: "Domínio já está configurado na Vercel" });
       }
       return res.status(vercelRes.status).json({ error: errMsg || "Erro ao adicionar domínio na Vercel" });
