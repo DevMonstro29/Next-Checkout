@@ -148,23 +148,33 @@ const PixPayment = ({
   const effectiveInstrNumColor = p.instructionNumberColor || primaryColor;
   const effectiveInstrTextColor = p.instructionTextColor || theme?.colors.textMuted || "#6b7280";
 
-  // Poll para status (intervalo maior pois webhook atualiza o banco; payment-status prioriza DB)
+  // Verificação via webhook: SSE notifica em tempo real quando pagamento é confirmado (sem polling)
   useEffect(() => {
     if (paymentStatus === "paid" || paymentStatus === "expired" || paymentStatus === "cancelled") return;
 
-    const interval = setInterval(async () => {
-      try {
-        const response = await fetch(apiUrl(`/api/payment-status/${paymentData.transaction_id}`));
-        const result = await response.json();
-        if (result?.success && result.data?.status) {
-          setPaymentStatus(result.data.status);
-        }
-      } catch (err) {
-        console.error("Error checking payment status:", err);
-      }
-    }, 15000);
+    const tid = paymentData.transaction_id;
+    const url = apiUrl(`/api/payment-events/${tid}`);
+    const es = new EventSource(url);
 
-    return () => clearInterval(interval);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data?.status === "paid") setPaymentStatus("paid");
+      } catch {}
+      es.close();
+    };
+    es.onerror = () => {
+      es.close();
+      // Fallback: uma checagem via REST se SSE falhar (ex: antes do webhook)
+      fetch(apiUrl(`/api/payment-status/${tid}`))
+        .then((r) => r.json())
+        .then((result) => {
+          if (result?.success && result.data?.status === "paid") setPaymentStatus("paid");
+        })
+        .catch(() => {});
+    };
+
+    return () => es.close();
   }, [paymentData.transaction_id, paymentStatus]);
 
   // Build redirect URL with customer params if configured
@@ -187,21 +197,14 @@ const PixPayment = ({
     }
   };
 
-  // Redirect after confirmed
+  // Redirecionar automaticamente na mesma aba quando pagamento aprovado
   useEffect(() => {
     if (paymentStatus !== "paid" || !redirectUrl) return;
-    setCountdown(5);
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          window.location.href = getRedirectUrlWithParams();
-          return 0;
-        }
-        return prev - 1;
-      });
+    setCountdown(1);
+    const t = setTimeout(() => {
+      window.location.href = getRedirectUrlWithParams();
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(t);
   }, [paymentStatus, redirectUrl]);
 
   const handleCopy = async () => {
@@ -241,7 +244,7 @@ const PixPayment = ({
           <p className="text-sm" style={{ color: mutedColor }}>{confirmedSubtitle}</p>
           {redirectUrl && (
             <p className="text-xs mt-3" style={{ color: mutedColor }}>
-              Redirecionando em {countdown} segundos...
+              Redirecionando automaticamente...
             </p>
           )}
         </div>

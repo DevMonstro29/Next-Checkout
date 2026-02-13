@@ -1,9 +1,13 @@
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const { EventEmitter } = require("events");
 const dns = require("dns").promises;
 const https = require("https");
 const http = require("http");
+
+const paymentEvents = new EventEmitter();
+paymentEvents.setMaxListeners(500);
 
 const ENCRYPTION_PREFIX = "enc:";
 const IV_LENGTH = 12;
@@ -133,6 +137,8 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || "").trim();
 const API_BASE_URL = (process.env.API_BASE_URL || process.env.VITE_API_URL || "").trim().replace(/\/$/, "");
+
+// CORS: painel admin (allowedOrigins) + endpoints públicos de checkout (qualquer domínio)
 const allowedOrigins = ["https://app.nextcheckoutbr.com", "http://localhost:8080", "http://localhost:5173"];
 if (FRONTEND_URL) {
   FRONTEND_URL.split(",").forEach((o) => {
@@ -141,29 +147,26 @@ if (FRONTEND_URL) {
   });
 }
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  } else if (allowedOrigins.length > 0) {
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
-  }
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
-  next();
-});
+const publicCheckoutPaths = ["/api/create-pix-payment", "/api/payment-status", "/api/payment-events"];
+function isPublicCheckoutPath(path) {
+  return publicCheckoutPaths.some((p) => path === p || path.startsWith(p + "/"));
+}
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  optionsSuccessStatus: 204,
-}));
+// CORS dinâmico: endpoints públicos (create-pix-payment, payment-status) aceitam qualquer domínio de checkout
+app.use(
+  cors((req, cb) => {
+    const orig = req.headers.origin;
+    const allowOrigin =
+      isPublicCheckoutPath(req.path) && orig ? true : orig && allowedOrigins.includes(orig) ? orig : allowedOrigins[0] || false;
+    cb(null, {
+      origin: allowOrigin,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      optionsSuccessStatus: 204,
+    });
+  }),
+);
 
 // Webhook PortoPag (docs.portopag.com): event, transaction_id no root; responder 200 OK em <5s
 app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), async (req, res) => {
@@ -235,6 +238,7 @@ app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), asy
       const paidAt = payload.paid_at || (payload.data && payload.data.paid_at) || new Date().toISOString();
       await supabase.from("sales").update({ status: "paid", paid_at: paidAt }).eq("id", sale.id);
       log("Webhook: venda " + sale.id + " marcada como paga (transaction_id=" + txnId + ")");
+      paymentEvents.emit("paid:" + txnId, { status: "paid", paid_at: paidAt });
     } else if (event === "payment.expired") {
       await supabase.from("sales").update({ status: "expired" }).eq("id", sale.id);
       log("Webhook: venda " + sale.id + " marcada como expirada (transaction_id=" + txnId + ")");
@@ -696,22 +700,41 @@ app.post("/api/save-portopag-key", async (req, res) => {
   }
 });
 
+// Normalizar hostname para comparação (sem protocolo, lowercase)
+function normalizeHost(originOrHost) {
+  if (!originOrHost || typeof originOrHost !== "string") return "";
+  let s = originOrHost.trim().toLowerCase();
+  try {
+    if (s.startsWith("http://") || s.startsWith("https://")) {
+      s = new URL(s).hostname;
+    } else {
+      s = s.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+    }
+  } catch {
+    s = s.replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+  }
+  return s;
+}
+
 // Criar pagamento PIX
 // amountCents = total do checkout (produto×quantidade + frete + order bumps)
+// Apenas domínios verificados (custom_domain do checkout ou app principal) podem chamar
 app.post("/api/create-pix-payment", async (req, res) => {
   try {
     const { checkoutId, name, email, cpf, phone, productName, amountCents, utm_source, utm_campaign, utm_medium, utm_content, utm_term } = req.body;
 
     let apiKey = PORTOPAG_API_KEY;
+    let checkout = null;
 
     if (checkoutId && supabase) {
-      const { data: checkout, error: checkoutError } = await supabase
+      const { data: c, error: checkoutError } = await supabase
         .from("checkouts")
-        .select("user_id")
+        .select("user_id, custom_domain")
         .eq("id", checkoutId)
         .single();
 
-      if (!checkoutError && checkout) {
+      if (!checkoutError && c) {
+        checkout = c;
         const { data: settings } = await supabase
           .from("user_settings")
           .select("portopag_api_key")
@@ -725,6 +748,22 @@ app.post("/api/create-pix-payment", async (req, res) => {
             success: false,
             error: "Configure sua API Key da PortoPag em Integrações no painel admin.",
           });
+        }
+
+        // Validar domínio: apenas origem do checkout (custom_domain ou app principal)
+        const origin = req.headers.origin || "";
+        const originHost = normalizeHost(origin);
+        if (originHost) {
+          const customDomain = normalizeHost(checkout.custom_domain || "");
+          const allowed =
+            (customDomain && (originHost === customDomain || originHost === "www." + customDomain)) ||
+            allowedOrigins.some((o) => normalizeHost(o) === originHost);
+          if (!allowed) {
+            return res.status(403).json({
+              success: false,
+              error: "Domínio não autorizado para este checkout. Configure o domínio no painel admin.",
+            });
+          }
         }
       }
     }
@@ -1026,6 +1065,35 @@ app.get("/api/payment-status/:transactionId", async (req, res) => {
       error: "Erro interno ao consultar status",
     });
   }
+});
+
+// SSE: notificação em tempo real quando webhook confirma pagamento (evita polling)
+app.get("/api/payment-events/:transactionId", (req, res) => {
+  const { transactionId } = req.params;
+  if (!transactionId) return res.status(400).end();
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  const onPaid = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    res.end();
+  };
+
+  paymentEvents.once("paid:" + transactionId, onPaid);
+
+  const timeout = setTimeout(() => {
+    paymentEvents.off("paid:" + transactionId, onPaid);
+    if (!res.writableEnded) res.end();
+  }, 300000);
+
+  req.on("close", () => {
+    clearTimeout(timeout);
+    paymentEvents.off("paid:" + transactionId, onPaid);
+  });
 });
 
 // Quando FRONTEND_URL está definido = deploy separado, frontend em outro domínio
