@@ -40,6 +40,9 @@ interface PixPageCustomProps {
   helpLinkText?: string;
   confirmedTitle?: string;
   confirmedSubtitle?: string;
+  redirectMessage?: string;
+  redirectScreenLogoUrl?: string;
+  redirectDelaySeconds?: number;
   showQrCode?: boolean;
   headerLogoUrl?: string;
   headerLogoSize?: string;
@@ -98,7 +101,6 @@ const PixPayment = ({
   const [copied, setCopied] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(paymentData.status);
   const [countdown, setCountdown] = useState(5);
-  const [checking, setChecking] = useState(false);
 
   // Defaults
   const p = pixPageProps || {};
@@ -121,6 +123,11 @@ const PixPayment = ({
   const helpLinkText = p.helpLinkText || "Caso tenha dúvida, clique aqui para ver o tutorial";
   const confirmedTitle = p.confirmedTitle || "Pagamento Confirmado!";
   const confirmedSubtitle = p.confirmedSubtitle || "Seu pagamento foi recebido com sucesso. Obrigado!";
+  const redirectMessage = p.redirectMessage ?? "Redirecionando automaticamente...";
+  const redirectScreenLogoUrl = p.redirectScreenLogoUrl || "";
+  const redirectDelaySeconds = typeof p.redirectDelaySeconds === "number" && p.redirectDelaySeconds > 0
+    ? p.redirectDelaySeconds
+    : 1.5;
   const showQrCode = p.showQrCode ?? true;
   const headerLogoUrl = p.headerLogoUrl || "";
   const headerLogoSize = p.headerLogoSize || "56px";
@@ -193,23 +200,6 @@ const PixPayment = ({
     };
   }, [paymentData.transaction_id, paymentStatus]);
 
-  const handleManualCheck = async () => {
-    if (paymentStatus === "paid" || checking) return;
-    setChecking(true);
-    try {
-      const res = await fetch(apiUrl(`/api/payment-status/${paymentData.transaction_id}`));
-      const result = await res.json();
-      if (result?.success && result.data?.status === "paid") {
-        setPaymentStatus("paid");
-        if (redirectUrl?.trim()) {
-          const dest = getRedirectUrlWithParams();
-          if (dest) setTimeout(() => { window.location.href = dest; }, 500);
-        }
-      }
-    } catch {}
-    setChecking(false);
-  };
-
   // Build redirect URL with customer params if configured
   const getRedirectUrlWithParams = (): string => {
     if (!redirectUrl) return "";
@@ -236,15 +226,16 @@ const PixPayment = ({
     const dest = getRedirectUrlWithParams();
     if (!dest) return;
     setCountdown(1);
+    const delayMs = Math.round(redirectDelaySeconds * 1000);
     const t = setTimeout(() => {
       try {
         window.location.assign(dest);
       } catch {
         window.location.href = dest;
       }
-    }, 1500);
+    }, delayMs);
     return () => clearTimeout(t);
-  }, [paymentStatus, redirectUrl]);
+  }, [paymentStatus, redirectUrl, redirectDelaySeconds]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(paymentData.pix_code);
@@ -274,16 +265,28 @@ const PixPayment = ({
           style={{ backgroundColor: cardColor, border: `1px solid ${effectiveIconColor}30`, borderRadius }}
         >
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: `${effectiveIconColor}20` }}
+            className="rounded-2xl flex items-center justify-center mx-auto mb-4 overflow-hidden"
+            style={{
+              width: "64px",
+              height: "64px",
+              minWidth: "64px",
+              minHeight: "64px",
+              backgroundColor: redirectScreenLogoUrl ? "transparent" : `${effectiveIconColor}20`,
+            }}
           >
-            <CheckCircle2 className="w-8 h-8" style={{ color: effectiveIconColor }} />
+            {redirectScreenLogoUrl ? (
+              <img src={redirectScreenLogoUrl} alt="" className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: `${effectiveIconColor}20` }}>
+                <CheckCircle2 className="w-8 h-8" style={{ color: effectiveIconColor }} />
+              </div>
+            )}
           </div>
           <h2 className="font-bold text-xl mb-2" style={{ color: textColor }}>{confirmedTitle}</h2>
           <p className="text-sm" style={{ color: mutedColor }}>{confirmedSubtitle}</p>
-          {redirectUrl && (
+          {redirectUrl && redirectMessage && (
             <p className="text-xs mt-3" style={{ color: mutedColor }}>
-              Redirecionando automaticamente...
+              {redirectMessage}
             </p>
           )}
         </div>
@@ -437,27 +440,9 @@ const PixPayment = ({
       )}
 
       {showHelpLink && (
-        <div className="flex items-center justify-center gap-1.5 text-[10px] pb-4" style={{ color: mutedColor }}>
+        <div className="flex items-center justify-center gap-1.5 text-[10px] pb-6" style={{ color: mutedColor }}>
           <HelpCircle className="w-3 h-3" />
           <span>{helpLinkText}</span>
-        </div>
-      )}
-
-      {redirectUrl && (
-        <div className="flex justify-center pb-6">
-          <button
-            type="button"
-            onClick={handleManualCheck}
-            disabled={checking}
-            className="text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            style={{
-              backgroundColor: `${effectiveIconColor}15`,
-              color: effectiveIconColor,
-              border: `1px solid ${effectiveIconColor}40`,
-            }}
-          >
-            {checking ? "Verificando..." : "Já paguei — verificar e redirecionar"}
-          </button>
         </div>
       )}
     </div>

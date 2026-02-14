@@ -994,24 +994,49 @@ app.post("/api/sync-sale/:transactionId", async (req, res) => {
 
     if (!sale) return res.status(404).json({ error: "Venda não encontrada" });
 
+    let apiKey = PORTOPAG_API_KEY;
     if (!adminUser) {
       const { data: checkout } = await supabase.from("checkouts").select("user_id").eq("id", sale.checkout_id).single();
       if (!checkout || checkout.user_id !== user.id) {
         return res.status(403).json({ error: "Sem permissão para esta venda" });
       }
+      const { data: settings } = await supabase.from("user_settings").select("portopag_api_key").eq("user_id", checkout.user_id).maybeSingle();
+      if (settings?.portopag_api_key) apiKey = decryptApiKey(settings.portopag_api_key);
+    } else {
+      const { data: checkout } = await supabase.from("checkouts").select("user_id").eq("id", sale.checkout_id).single();
+      if (checkout) {
+        const { data: settings } = await supabase.from("user_settings").select("portopag_api_key").eq("user_id", checkout.user_id).maybeSingle();
+        if (settings?.portopag_api_key) apiKey = decryptApiKey(settings.portopag_api_key);
+      }
     }
 
-    const response = await makeRequest(`${PORTOPAG_API_URL}/public/status/${transactionId}`, {
+    if (!apiKey) return res.status(400).json({ error: "API Key PortoPag não configurada" });
+
+    let response = await makeRequest(`${PORTOPAG_API_URL}/payments/${transactionId}`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
     });
+    if (!response.ok) {
+      response = await makeRequest(`${PORTOPAG_API_URL}/public/status/${transactionId}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const data = response.json;
     const result = data?.data || data;
     const apiStatus = (result?.status || "").toLowerCase();
+    log("Sync: transaction_id=" + transactionId + " apiStatus=" + apiStatus + " responseOk=" + response.ok);
 
     if (apiStatus === "paid") {
-      const paidAt = result?.paid_at || new Date().toISOString();
-      await supabase.from("sales").update({ status: "paid", paid_at: paidAt }).eq("id", sale.id);
+      const paidAt = result?.paid_at || result?.created_at || new Date().toISOString();
+      const { error: upErr } = await supabase.from("sales").update({ status: "paid", paid_at: paidAt }).eq("id", sale.id);
+      if (upErr) {
+        log("Sync: erro ao atualizar venda: " + JSON.stringify(upErr));
+        return res.status(500).json({ error: "Erro ao atualizar banco" });
+      }
       log("Sync: venda " + sale.id + " marcada como paga (transaction_id=" + transactionId + ")");
       return res.json({ success: true, status: "paid", paid_at: paidAt });
     }
@@ -1023,10 +1048,11 @@ app.post("/api/sync-sale/:transactionId", async (req, res) => {
       await supabase.from("sales").update({ status: "cancelled" }).eq("id", sale.id);
       return res.json({ success: true, status: "cancelled" });
     }
-    return res.json({ success: true, status: sale.status });
+    return res.json({ success: true, status: sale.status, apiStatus: apiStatus || "unknown" });
   } catch (err) {
     console.error("Erro ao sincronizar venda:", err);
-    return res.status(500).json({ error: "Erro ao sincronizar" });
+    log("Sync: exceção " + (err && err.message));
+    return res.status(500).json({ error: "Erro ao sincronizar: " + (err && err.message) });
   }
 });
 

@@ -320,6 +320,9 @@ export interface PixPageProps {
   helpLinkText: string;
   confirmedTitle: string;
   confirmedSubtitle: string;
+  redirectMessage?: string;
+  redirectScreenLogoUrl?: string;
+  redirectDelaySeconds?: number;
   showQrCode: boolean;
 }
 
@@ -586,6 +589,8 @@ export const DEFAULT_ELEMENT_PROPS: Record<CheckoutElementType, Record<string, a
     helpLinkText: 'Caso tenha dúvida, clique aqui para ver o tutorial',
     confirmedTitle: 'Pagamento Confirmado!',
     confirmedSubtitle: 'Seu pagamento foi recebido com sucesso. Obrigado!',
+    redirectMessage: 'Redirecionando automaticamente...',
+    redirectDelaySeconds: 1.5,
     showQrCode: true,
   } as PixPageProps,
 };

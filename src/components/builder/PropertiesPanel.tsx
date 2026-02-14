@@ -940,9 +940,23 @@ export function PixPagePropsEditor({ props, onUpdate }: { props: Record<string, 
         <PropInput label="Texto do link" value={props.helpLinkText || ''} onChange={(v) => onUpdate({ helpLinkText: v })} />
       )}
 
-      <h4 className="text-neutral-700 dark:text-neutral-300 text-xs font-semibold mt-4">Pagamento confirmado</h4>
-      <PropInput label="Título confirmado" value={props.confirmedTitle || ''} onChange={(v) => onUpdate({ confirmedTitle: v })} placeholder="Pagamento Confirmado!" />
-      <PropInput label="Subtítulo confirmado" value={props.confirmedSubtitle || ''} onChange={(v) => onUpdate({ confirmedSubtitle: v })} />
+      <h4 className="text-neutral-700 dark:text-neutral-300 text-xs font-semibold mt-4">Tela de redirecionamento (após pagamento)</h4>
+      <PropInput label="Título" value={props.confirmedTitle || ''} onChange={(v) => onUpdate({ confirmedTitle: v })} placeholder="Pagamento Confirmado!" />
+      <PropInput label="Subtítulo" value={props.confirmedSubtitle || ''} onChange={(v) => onUpdate({ confirmedSubtitle: v })} placeholder="Seu pagamento foi recebido. Obrigado!" />
+      <PropInput label="Mensagem de redirecionamento" value={props.redirectMessage || ''} onChange={(v) => onUpdate({ redirectMessage: v })} placeholder="Redirecionando automaticamente..." />
+      <PropInput label="Logo (URL)" value={props.redirectScreenLogoUrl || ''} onChange={(v) => onUpdate({ redirectScreenLogoUrl: v })} placeholder="URL da logo (vazio = ícone padrão)" />
+      <div>
+        <label className="text-neutral-600 dark:text-neutral-400 text-xs font-medium mb-1 block">Tempo antes do redirect (segundos)</label>
+        <input
+          type="number"
+          min="0.5"
+          max="10"
+          step="0.5"
+          value={typeof props.redirectDelaySeconds === 'number' ? props.redirectDelaySeconds : 1.5}
+          onChange={(e) => onUpdate({ redirectDelaySeconds: parseFloat(e.target.value) || 1.5 })}
+          className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-lg px-3 py-2 text-sm text-neutral-900 dark:text-white"
+        />
+      </div>
 
       <h4 className="text-neutral-700 dark:text-neutral-300 text-xs font-semibold mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700">Timer</h4>
       <PropInput label="Duração exibida (minutos)" type="number" value={String(props.timerDisplayMinutes || '')} onChange={(v) => onUpdate({ timerDisplayMinutes: v ? parseInt(v, 10) || 0 : 0 })} placeholder="ex: 30 (vazio = tempo real da API)" />

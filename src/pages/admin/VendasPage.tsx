@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiUrl } from '@/lib/api';
 import { ShoppingCart, Filter, Search, Calendar, ArrowUpDown, LayoutGrid, List, Loader2, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Sale {
   id: string;
@@ -88,8 +89,14 @@ const VendasPage = () => {
       const data = await res.json();
       if (res.ok && data?.success) {
         loadSales();
+        if (data.status === 'paid') toast.success('Venda atualizada para Pago!');
+        else if (data.status !== 'pending') toast.success('Status atualizado.');
+      } else {
+        toast.error(data?.error || 'Erro ao sincronizar');
       }
-    } catch {}
+    } catch (e) {
+      toast.error('Erro ao sincronizar');
+    }
     setSyncingId(null);
   };
 
