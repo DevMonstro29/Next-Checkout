@@ -30,19 +30,17 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
   const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
 
   // Contagem regressiva só no checkout (não no builder)
+  // Usa Date.now() em vez de decrementar para funcionar em mobile (setInterval é throttled em abas inativas)
   useEffect(() => {
     if (isBuilder) return;
-    setSecondsLeft(totalSeconds);
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+    const endTime = Date.now() + totalSeconds * 1000;
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
   }, [isBuilder, totalSeconds]);
 
   const m = Math.floor(secondsLeft / 60);
@@ -63,6 +61,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
             left: 0,
             right: 0,
             zIndex: 9999,
+            paddingTop: `calc(0.75rem + env(safe-area-inset-top, 0px))`,
             backgroundColor: backgroundColorWithAlpha,
             borderRadius: isBuilder ? radius : 0,
             minHeight: TIMER_BAR_HEIGHT,
@@ -90,6 +89,7 @@ const TimerElement = ({ props, theme, isBuilder = false }: Props) => {
             left: 0,
             right: 0,
             zIndex: 9999,
+            paddingBottom: `calc(0.75rem + env(safe-area-inset-bottom, 0px))`,
             backgroundColor: backgroundColorWithAlpha,
             borderRadius: isBuilder ? radius : 0,
             minHeight: TIMER_BAR_HEIGHT,
