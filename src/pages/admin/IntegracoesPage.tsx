@@ -158,8 +158,11 @@ const IntegracoesPage = () => {
                   O NextCheckout envia automaticamente o <strong>postbackUrl</strong> ao criar cada PIX. A PortoPag envia os eventos
                   (<em>payment.paid</em>, <em>payment.expired</em>, <em>payment.failed</em>) direto para nossa API — <strong>não é necessário configurar webhook no painel da PortoPag</strong>.
                 </p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
                   Configure <code className="bg-neutral-200 dark:bg-neutral-700 px-1 rounded">API_BASE_URL</code> no backend para garantir que o postback funcione (ex: https://api.nextcheckoutbr.com).
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Se vendas ficarem como &quot;Pendente&quot; após o pagamento, use o botão de sincronizar na página de Vendas ou configure o webhook no painel da PortoPag como backup.
                 </p>
               </div>
             </div>

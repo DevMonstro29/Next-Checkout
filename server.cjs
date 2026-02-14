@@ -971,6 +971,65 @@ app.get("/api/sales", async (req, res) => {
   }
 });
 
+// Sincronizar status de uma venda com a Porto Pag (para vendas que ficaram pendentes quando o postback falhou)
+app.post("/api/sync-sale/:transactionId", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ") || !supabase) {
+    return res.status(401).json({ error: "Não autorizado" });
+  }
+  const { transactionId } = req.params;
+  if (!transactionId) return res.status(400).json({ error: "transactionId obrigatório" });
+  const token = auth.slice(7);
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) return res.status(401).json({ error: "Não autorizado" });
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("user_id", user.id).maybeSingle();
+    const adminUser = checkIsAdmin(user, profile);
+
+    const { data: sale } = await supabase
+      .from("sales")
+      .select("id, checkout_id, status")
+      .eq("transaction_id", transactionId)
+      .maybeSingle();
+
+    if (!sale) return res.status(404).json({ error: "Venda não encontrada" });
+
+    if (!adminUser) {
+      const { data: checkout } = await supabase.from("checkouts").select("user_id").eq("id", sale.checkout_id).single();
+      if (!checkout || checkout.user_id !== user.id) {
+        return res.status(403).json({ error: "Sem permissão para esta venda" });
+      }
+    }
+
+    const response = await makeRequest(`${PORTOPAG_API_URL}/public/status/${transactionId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = response.json;
+    const result = data?.data || data;
+    const apiStatus = (result?.status || "").toLowerCase();
+
+    if (apiStatus === "paid") {
+      const paidAt = result?.paid_at || new Date().toISOString();
+      await supabase.from("sales").update({ status: "paid", paid_at: paidAt }).eq("id", sale.id);
+      log("Sync: venda " + sale.id + " marcada como paga (transaction_id=" + transactionId + ")");
+      return res.json({ success: true, status: "paid", paid_at: paidAt });
+    }
+    if (apiStatus === "expired") {
+      await supabase.from("sales").update({ status: "expired" }).eq("id", sale.id);
+      return res.json({ success: true, status: "expired" });
+    }
+    if (apiStatus === "cancelled") {
+      await supabase.from("sales").update({ status: "cancelled" }).eq("id", sale.id);
+      return res.json({ success: true, status: "cancelled" });
+    }
+    return res.json({ success: true, status: sale.status });
+  } catch (err) {
+    console.error("Erro ao sincronizar venda:", err);
+    return res.status(500).json({ error: "Erro ao sincronizar" });
+  }
+});
+
 // Estatísticas do painel (Início). Admin vê estatísticas globais.
 app.get("/api/stats", async (req, res) => {
   const auth = req.headers.authorization;

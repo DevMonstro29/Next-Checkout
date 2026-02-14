@@ -98,6 +98,7 @@ const PixPayment = ({
   const [copied, setCopied] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(paymentData.status);
   const [countdown, setCountdown] = useState(5);
+  const [checking, setChecking] = useState(false);
 
   // Defaults
   const p = pixPageProps || {};
@@ -181,7 +182,8 @@ const PixPayment = ({
       checkStatus();
     };
 
-    const pollInterval = setInterval(checkStatus, 4000);
+    checkStatus();
+    const pollInterval = setInterval(checkStatus, 3000);
     const timeout = setTimeout(() => clearInterval(pollInterval), 300000);
 
     return () => {
@@ -190,6 +192,23 @@ const PixPayment = ({
       clearTimeout(timeout);
     };
   }, [paymentData.transaction_id, paymentStatus]);
+
+  const handleManualCheck = async () => {
+    if (paymentStatus === "paid" || checking) return;
+    setChecking(true);
+    try {
+      const res = await fetch(apiUrl(`/api/payment-status/${paymentData.transaction_id}`));
+      const result = await res.json();
+      if (result?.success && result.data?.status === "paid") {
+        setPaymentStatus("paid");
+        if (redirectUrl?.trim()) {
+          const dest = getRedirectUrlWithParams();
+          if (dest) setTimeout(() => { window.location.href = dest; }, 500);
+        }
+      }
+    } catch {}
+    setChecking(false);
+  };
 
   // Build redirect URL with customer params if configured
   const getRedirectUrlWithParams = (): string => {
@@ -223,9 +242,9 @@ const PixPayment = ({
       } catch {
         window.location.href = dest;
       }
-    }, 1000);
+    }, 1500);
     return () => clearTimeout(t);
-  }, [paymentStatus, redirectUrl, customerData, redirectParamsConfig]);
+  }, [paymentStatus, redirectUrl]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(paymentData.pix_code);
@@ -418,9 +437,27 @@ const PixPayment = ({
       )}
 
       {showHelpLink && (
-        <div className="flex items-center justify-center gap-1.5 text-[10px] pb-6" style={{ color: mutedColor }}>
+        <div className="flex items-center justify-center gap-1.5 text-[10px] pb-4" style={{ color: mutedColor }}>
           <HelpCircle className="w-3 h-3" />
           <span>{helpLinkText}</span>
+        </div>
+      )}
+
+      {redirectUrl && (
+        <div className="flex justify-center pb-6">
+          <button
+            type="button"
+            onClick={handleManualCheck}
+            disabled={checking}
+            className="text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            style={{
+              backgroundColor: `${effectiveIconColor}15`,
+              color: effectiveIconColor,
+              border: `1px solid ${effectiveIconColor}40`,
+            }}
+          >
+            {checking ? "Verificando..." : "Já paguei — verificar e redirecionar"}
+          </button>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiUrl } from '@/lib/api';
-import { ShoppingCart, Filter, Search, Calendar, ArrowUpDown, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { ShoppingCart, Filter, Search, Calendar, ArrowUpDown, LayoutGrid, List, Loader2, RefreshCw } from 'lucide-react';
 
 interface Sale {
   id: string;
@@ -48,28 +48,50 @@ const statusClass: Record<string, string> = {
   cancelled: 'bg-red-500/15 text-red-500',
 };
 
+const fetchSales = (token: string) =>
+  fetch(apiUrl('/api/sales'), { headers: { Authorization: `Bearer ${token}` } })
+    .then((res) => res.json())
+    .then((data) => data.sales || []);
+
 const VendasPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [syncingId, setSyncingId] = useState<string | null>(null);
   const { session } = useAuth();
+
+  const loadSales = () => {
+    if (!session?.access_token) return;
+    fetchSales(session.access_token).then(setSales).catch(() => setSales([]));
+  };
 
   useEffect(() => {
     if (!session?.access_token) {
       setLoading(false);
       return;
     }
-    fetch(apiUrl('/api/sales'), {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setSales(data.sales || []);
-      })
+    fetchSales(session.access_token)
+      .then(setSales)
       .catch(() => setSales([]))
       .finally(() => setLoading(false));
   }, [session?.access_token]);
+
+  const handleSync = async (transactionId: string) => {
+    if (!session?.access_token || syncingId) return;
+    setSyncingId(transactionId);
+    try {
+      const res = await fetch(apiUrl(`/api/sync-sale/${transactionId}`), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data?.success) {
+        loadSales();
+      }
+    } catch {}
+    setSyncingId(null);
+  };
 
   const filtered = sales.filter(
     (s) =>
@@ -189,12 +211,27 @@ const VendasPage = () => {
                   <div className="col-span-2 text-right font-medium text-neutral-900 dark:text-white">
                     {formatCurrency(sale.amount_cents)}
                   </div>
-                  <div className="col-span-1 text-right">
+                  <div className="col-span-1 text-right flex items-center justify-end gap-1">
                     <span
                       className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusClass[sale.status] || 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'}`}
                     >
                       {statusLabel[sale.status] || sale.status}
                     </span>
+                    {sale.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => handleSync(sale.transaction_id)}
+                        disabled={syncingId === sale.transaction_id}
+                        className="p-1 rounded-lg text-neutral-500 hover:text-brand-500 hover:bg-brand-500/10 transition-colors"
+                        title="Sincronizar com Porto Pag"
+                      >
+                        {syncingId === sale.transaction_id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
