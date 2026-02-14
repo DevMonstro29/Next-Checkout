@@ -24,7 +24,7 @@ interface CartSummaryContext {
 }
 
 // displayMode: 'open' = sempre aberto | 'collapsible' = abrir/fechar | 'collapsible_closed' = abrir/fechar (inicia fechado) | 'closed' = sempre fechado
-const CartSummaryElement = ({ props, theme, products = [], shippingContext }: Props & { shippingContext?: CartSummaryContext }) => {
+const CartSummaryElement = ({ props, theme, products = [], shippingContext, compact }: Props & { shippingContext?: CartSummaryContext; compact?: boolean }) => {
   const {
     showTitle = false,
     title = 'Seu carrinho',
@@ -140,14 +140,7 @@ const CartSummaryElement = ({ props, theme, products = [], shippingContext }: Pr
     const subtotalDisplay = customSubtotalValue.trim() !== '' ? customSubtotalValue.trim() : (originalTotalCents > 0 ? (originalTotalCents / 100).toFixed(2).replace('.', ',') : formatted);
     const discountDisplay = customDiscountValue.trim() !== '' ? customDiscountValue.trim() : (discountCents > 0 ? `- ${discountFormatted}` : '- 0,00');
     return (
-      <div
-        style={{
-          backgroundColor: cardBg,
-          border: `1px solid ${borderColor}`,
-          borderRadius: radius,
-          overflow: 'hidden',
-        }}
-      >
+      <div style={cardStyle}>
         <div className="flex items-start gap-4 px-5 py-4">
           {headerLogoUrl ? (
             <img
@@ -206,14 +199,7 @@ const CartSummaryElement = ({ props, theme, products = [], shippingContext }: Pr
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: cardBg,
-        border: `1px solid ${borderColor}`,
-        borderRadius: radius,
-        overflow: 'hidden',
-      }}
-    >
+    <div style={cardStyle}>
       {/* Compact header – oculta totalmente quando aberto + showHeaderWhenOpen=false (seta vai pro conteúdo) */}
       {hasHeader && !(canToggle && isOpen && !showHeaderWhenOpen) && (
         <button

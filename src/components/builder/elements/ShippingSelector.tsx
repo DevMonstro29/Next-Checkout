@@ -20,9 +20,11 @@ interface Props {
   isBuilder?: boolean;
   /** Personalização visual (vem do elemento Address) */
   displayProps?: ShippingSelectorDisplayProps;
+  /** Quando true, não aplica o wrapper de card */
+  compact?: boolean;
 }
 
-const ShippingSelector = ({ options, selectedId, onSelect, theme, isBuilder, displayProps }: Props) => {
+const ShippingSelector = ({ options, selectedId, onSelect, theme, isBuilder, displayProps, compact }: Props) => {
   const cardBg = theme?.colors.card || '#ffffff';
   const borderColor = theme?.colors.border || '#e5e7eb';
   const textColor = theme?.colors.text || '#1a1a2e';
@@ -42,12 +44,8 @@ const ShippingSelector = ({ options, selectedId, onSelect, theme, isBuilder, dis
 
   return (
     <div
-      className="p-5"
-      style={{
-        backgroundColor: cardBg,
-        border: `1px solid ${borderColor}`,
-        borderRadius: radius,
-      }}
+      className={compact ? '' : 'p-5'}
+      style={compact ? undefined : { backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: radius }}
     >
       <div className="flex items-center gap-2 mb-4">
         {showIcon && (

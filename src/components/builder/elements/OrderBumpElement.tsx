@@ -8,9 +8,10 @@ interface Props {
   isBuilder?: boolean;
   selectedBumps?: string[];
   onToggleBump?: (id: string) => void;
+  compact?: boolean;
 }
 
-const OrderBumpElement = ({ props, theme, isBuilder = false, selectedBumps = [], onToggleBump }: Props) => {
+const OrderBumpElement = ({ props, theme, isBuilder = false, selectedBumps = [], onToggleBump, compact }: Props) => {
   const {
     title = 'Adicione ao seu pedido',
     titleIcon = 'gift',

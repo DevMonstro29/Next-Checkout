@@ -5,9 +5,10 @@ interface Props {
   props: Record<string, any>;
   theme?: CheckoutTheme;
   isBuilder?: boolean;
+  compact?: boolean;
 }
 
-const AddressElement = ({ props, theme, isBuilder }: Props) => {
+const AddressElement = ({ props, theme, isBuilder, compact }: Props) => {
   const {
     title = 'Endereço de Entrega',
     cepPlaceholder = '00000-000',
@@ -49,12 +50,8 @@ const AddressElement = ({ props, theme, isBuilder }: Props) => {
 
   return (
     <div
-      className="p-5"
-      style={{
-        backgroundColor: cardBg,
-        border: `1px solid ${borderColor}`,
-        borderRadius: radius,
-      }}
+      className={compact ? '' : 'p-5'}
+      style={compact ? undefined : { backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: radius }}
     >
       <div className="flex items-center gap-2 mb-4">
         {showTitleIcon && (

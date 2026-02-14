@@ -558,18 +558,19 @@ const CheckoutRenderer = () => {
     paramTelefone: settings?.redirectParamTelefone || 'telefone',
   };
 
-  // PIX step
+  // PIX step (layout idêntico ao preview do builder)
   if (pixStep && paymentData) {
     const pixPageElement = elements.find((e) => e.type === 'pix_page' && e.visible);
     const pixPageProps = pixPageElement?.props || {};
     return (
       <div className="min-h-screen" style={{ backgroundColor: theme.colors.background, fontFamily: theme.font.family }}>
         {theme.customCSS && <style dangerouslySetInnerHTML={{ __html: theme.customCSS }} />}
-        <div className="mx-auto w-full px-4 sm:px-6 pb-8" style={{ maxWidth: theme.maxWidth }}>
-          {elements.filter((e) => e.type === 'header' && e.visible).map((el) => (
-            <ElementRenderer key={el.id} element={el} theme={theme} products={products} />
-          ))}
-          <PixPayment
+        <div className={`mx-auto w-full px-4 sm:px-8 pt-6 pb-6`} style={{ maxWidth: theme.maxWidth }}>
+          <div className="space-y-3">
+            {elements.filter((e) => e.type === 'header' && e.visible).map((el) => (
+              <ElementRenderer key={el.id} element={el} theme={theme} products={products} />
+            ))}
+            <PixPayment
             paymentData={paymentData}
             customerName={customerName}
             customerData={customerData}
@@ -578,6 +579,7 @@ const CheckoutRenderer = () => {
             theme={theme}
             pixPageProps={pixPageProps}
           />
+          </div>
         </div>
       </div>
     );
@@ -591,8 +593,8 @@ const CheckoutRenderer = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.colors.background, fontFamily: theme.font.family }}>
       {theme.customCSS && <style dangerouslySetInnerHTML={{ __html: theme.customCSS }} />}
-      <div className="mx-auto w-full px-4 sm:px-6 pb-8" style={{ maxWidth: theme.maxWidth }}>
-
+      <div className="mx-auto w-full px-4 sm:px-8 pt-10 pb-6" style={{ maxWidth: theme.maxWidth }}>
+        <div className="space-y-3">
         {/* Header always visible */}
         {sortedElements.filter((e) => e.type === 'header').map((el) => (
           <ElementRenderer key={el.id} element={el} theme={theme} products={products} />
@@ -617,9 +619,19 @@ const CheckoutRenderer = () => {
           </div>
         ))}
 
+        {/* Container único (layout igual ao preview do builder) */}
+        <div
+          className="p-5 space-y-3"
+          style={{
+            backgroundColor: theme.colors.card,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.borderRadius,
+          }}
+        >
         {/* ===== DIGITAL PRODUCT: single page ===== */}
         {!isPhysical && (
           <SinglePageCheckout
+            compact
             checkout={checkout}
             elements={sortedElements}
             products={products}
@@ -641,9 +653,10 @@ const CheckoutRenderer = () => {
 
         {/* ===== PHYSICAL PRODUCT: 3 STEPS MODE ===== */}
         {isPhysical && totalSteps === 3 && (
-          <div className="space-y-4 mt-2">
+          <div className="space-y-3">
             {currentStep === 1 && (
               <Step1Identification
+                compact
                 elements={sortedElements}
                 products={products}
                 formValues={formValues}
@@ -664,6 +677,7 @@ const CheckoutRenderer = () => {
 
             {currentStep === 2 && (
               <Step2Address
+                compact
                 elements={sortedElements}
                 products={products}
                 theme={theme}
@@ -687,6 +701,7 @@ const CheckoutRenderer = () => {
 
             {currentStep === 3 && (
               <Step3Payment
+                compact
                 elements={sortedElements}
                 products={products}
                 theme={theme}
@@ -717,11 +732,12 @@ const CheckoutRenderer = () => {
 
         {/* ===== PHYSICAL PRODUCT: 2 STEPS MODE ===== */}
         {isPhysical && totalSteps === 2 && (
-          <div className="space-y-4 mt-2">
+          <div className="space-y-3">
             {/* Step 1: Identificação + Endereço + Frete */}
             {currentStep === 1 && (
               <>
                 <Step1Identification
+                  compact
                   elements={sortedElements}
                   products={products}
                   formValues={formValues}
@@ -739,6 +755,7 @@ const CheckoutRenderer = () => {
                   onQuantityChange={handleQuantityChange}
                 />
                 <Step2Address
+                  compact
                   elements={sortedElements}
                   products={products}
                   theme={theme}
@@ -764,6 +781,7 @@ const CheckoutRenderer = () => {
             {/* Step 2: Pagamento */}
             {currentStep === 2 && (
               <Step3Payment
+                compact
                 elements={sortedElements}
                 products={products}
                 theme={theme}
@@ -791,6 +809,8 @@ const CheckoutRenderer = () => {
             />
           </div>
         )}
+        </div>
+        </div>
       </div>
     </div>
   );
@@ -972,6 +992,7 @@ function renderFormCard(
   noEmail: boolean,
   setNoEmail: (v: boolean) => void,
   onInputChange: (name: string, type: string, value: string) => void,
+  compact?: boolean,
 ) {
   const fields = element.props.fields || [];
   const enabledFields = fields.filter((f: any) => f.enabled);
@@ -982,13 +1003,13 @@ function renderFormCard(
   return (
     <div
       key={element.id}
-      style={{
+      style={compact ? { ...element.styles } : {
         backgroundColor: theme.colors.card,
         border: `1px solid ${theme.colors.border}`,
         borderRadius: theme.borderRadius,
         ...element.styles,
       }}
-      className="p-5"
+      className={compact ? '' : 'p-5'}
     >
       <div className="flex items-center gap-2 mb-4">
         {showTitleIcon && (
@@ -1055,6 +1076,7 @@ function renderAddressCard(
   onCepLookup: () => void,
   cepLoading: boolean,
   cepFound: boolean,
+  compact?: boolean,
 ) {
   const title = element?.props?.title || 'Endereço de Entrega';
   const cepPlaceholder = element?.props?.cepPlaceholder || '00000-000';
@@ -1080,13 +1102,13 @@ function renderAddressCard(
 
   return (
     <div
-      style={{
+      style={compact ? (element?.styles || {}) : {
         backgroundColor: theme.colors.card,
         border: `1px solid ${theme.colors.border}`,
         borderRadius: theme.borderRadius,
         ...(element?.styles || {}),
       }}
-      className="p-5"
+      className={compact ? '' : 'p-5'}
     >
       <div className="flex items-center gap-2 mb-4">
         {showTitleIcon && (
@@ -1191,6 +1213,7 @@ function SinglePageCheckout({
   selectedBumpItems = [],
   quantity = 1,
   onQuantityChange,
+  compact,
 }: {
   checkout: Checkout;
   elements: CheckoutElement[];
@@ -1208,20 +1231,21 @@ function SinglePageCheckout({
   selectedBumpItems?: { id: string; name: string; price_cents: number }[];
   quantity?: number;
   onQuantityChange?: (q: number) => void;
+  compact?: boolean;
 }) {
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-3">
       {elements
         .filter((e) => e.type !== 'header' && e.type !== 'timer' && e.type !== 'address' && e.type !== 'step_indicator' && e.type !== 'pix_page')
         .map((element) => {
           if (element.type === 'form') {
-            return renderFormCard(element, theme, formValues, noEmail, setNoEmail, onInputChange);
+            return renderFormCard(element, theme, formValues, noEmail, setNoEmail, onInputChange, compact);
           }
 
           if (element.type === 'cart_summary') {
             return (
               <div key={element.id} style={element.styles}>
-                <CartSummaryElement props={element.props} theme={theme} products={products} shippingContext={{ selectedBumpsCents, selectedBumpItems, quantity, onQuantityChange }} />
+                <CartSummaryElement props={element.props} theme={theme} products={products} shippingContext={{ selectedBumpsCents, selectedBumpItems, quantity, onQuantityChange }} compact={compact} />
               </div>
             );
           }
@@ -1229,7 +1253,7 @@ function SinglePageCheckout({
           if (element.type === 'order_bump') {
             return (
               <div key={element.id} style={element.styles}>
-                <OrderBumpElement props={element.props} theme={theme} selectedBumps={selectedBumps} onToggleBump={onToggleBump} />
+                <OrderBumpElement props={element.props} theme={theme} selectedBumps={selectedBumps} onToggleBump={onToggleBump} compact={compact} />
               </div>
             );
           }
@@ -1237,14 +1261,14 @@ function SinglePageCheckout({
           if (element.type === 'button') {
             return (
               <div key={element.id} style={element.styles}>
-                <ElementRenderer element={element} theme={theme} products={products} onFormSubmit={onSubmit} isSubmitting={isSubmitting} />
+                <ElementRenderer element={element} theme={theme} products={products} onFormSubmit={onSubmit} isSubmitting={isSubmitting} compact={compact} />
               </div>
             );
           }
 
           return (
             <div key={element.id} style={element.styles}>
-              <ElementRenderer element={element} theme={theme} products={products} />
+              <ElementRenderer element={element} theme={theme} products={products} compact={compact} />
             </div>
           );
         })}
@@ -1271,6 +1295,7 @@ function Step1Identification({
   selectedBumpItems = [],
   quantity = 1,
   onQuantityChange,
+  compact,
 }: {
   elements: CheckoutElement[];
   products: CheckoutProduct[];
@@ -1287,24 +1312,26 @@ function Step1Identification({
   selectedBumpItems?: { id: string; name: string; price_cents: number }[];
   quantity?: number;
   onQuantityChange?: (q: number) => void;
+  compact?: boolean;
 }) {
   // Show: banner, cart_summary, form, text, testimonial, security_badge, payment_methods, order_bump
   // Hide: address, payment, button (those are in other steps)
   const step1Types = new Set(['banner', 'text', 'image', 'form', 'cart_summary', 'testimonial', 'security_badge', 'payment_methods', 'order_bump', 'divider', 'spacer']);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {elements
         .filter((e) => step1Types.has(e.type))
         .map((element) => {
           if (element.type === 'form') {
-            return renderFormCard(element, theme, formValues, noEmail, setNoEmail, onInputChange);
+            return renderFormCard(element, theme, formValues, noEmail, setNoEmail, onInputChange, compact);
           }
 
           if (element.type === 'cart_summary') {
             return (
               <div key={element.id} style={element.styles}>
                 <CartSummaryElement
+                  compact={compact}
                   props={element.props}
                   theme={theme}
                   products={products}
@@ -1317,14 +1344,14 @@ function Step1Identification({
           if (element.type === 'order_bump') {
             return (
               <div key={element.id} style={element.styles}>
-                <OrderBumpElement props={element.props} theme={theme} selectedBumps={selectedBumps} onToggleBump={onToggleBump} />
+                <OrderBumpElement props={element.props} theme={theme} selectedBumps={selectedBumps} onToggleBump={onToggleBump} compact={compact} />
               </div>
             );
           }
 
           return (
             <div key={element.id} style={element.styles}>
-              <ElementRenderer element={element} theme={theme} products={products} />
+              <ElementRenderer element={element} theme={theme} products={products} compact={compact} />
             </div>
           );
         })}
@@ -1354,6 +1381,7 @@ function Step2Address({
   selectedBumpItems = [],
   quantity = 1,
   onQuantityChange,
+  compact,
 }: {
   elements: CheckoutElement[];
   products: CheckoutProduct[];
@@ -1373,13 +1401,14 @@ function Step2Address({
   selectedBumpItems?: { id: string; name: string; price_cents: number }[];
   quantity?: number;
   onQuantityChange?: (q: number) => void;
+  compact?: boolean;
 }) {
   const addressElement = elements.find((e) => e.type === 'address');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Address form */}
-      {renderAddressCard(addressElement, theme, address, onAddressChange, onCepChange, onCepLookup, cepLoading, cepFound)}
+      {renderAddressCard(addressElement, theme, address, onAddressChange, onCepChange, onCepLookup, cepLoading, cepFound, compact)}
 
       {/* Shipping selector */}
       {shippingOptions.length > 0 && (
@@ -1388,6 +1417,7 @@ function Step2Address({
           selectedId={selectedShippingId}
           onSelect={onShippingSelect}
           theme={theme}
+          compact={compact}
           displayProps={{
             title: addressElement?.props?.shippingBlockTitle || 'Opções de Frete',
             showIcon: addressElement?.props?.shippingBlockShowIcon ?? true,
@@ -1409,6 +1439,7 @@ function Step2Address({
             theme={theme}
             products={products}
             shippingContext={{ selectedShippingCents, selectedShippingName: selectedShipping?.name || '', selectedBumpsCents, selectedBumpItems, quantity, onQuantityChange }}
+            compact={compact}
           />
         </div>
       ))}
@@ -1433,6 +1464,7 @@ function Step3Payment({
   selectedBumpItems = [],
   quantity = 1,
   onQuantityChange,
+  compact,
 }: {
   elements: CheckoutElement[];
   products: CheckoutProduct[];
@@ -1447,15 +1479,16 @@ function Step3Payment({
   selectedBumpItems?: { id: string; name: string; price_cents: number }[];
   quantity?: number;
   onQuantityChange?: (q: number) => void;
+  compact?: boolean;
 }) {
   const mainProduct = products.find((p) => !p.is_upsell) || products[0];
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-3">
       {/* Summary of customer info */}
       <div
-        className="p-4 space-y-2"
-        style={{
+        className={compact ? 'space-y-2' : 'p-4 space-y-2'}
+        style={compact ? undefined : {
           backgroundColor: theme.colors.card,
           border: `1px solid ${theme.colors.border}`,
           borderRadius: theme.borderRadius,
@@ -1504,6 +1537,7 @@ function Step3Payment({
             theme={theme}
             products={products}
             shippingContext={{ selectedShippingCents, selectedShippingName: selectedShipping?.name || '', selectedBumpsCents, selectedBumpItems, quantity, onQuantityChange }}
+            compact={compact}
           />
         </div>
       ))}
@@ -1511,7 +1545,7 @@ function Step3Payment({
       {/* Payment elements */}
       {elements.filter((e) => e.type === 'payment').map((element) => (
         <div key={element.id} style={element.styles}>
-          <ElementRenderer element={element} theme={theme} products={products} />
+          <ElementRenderer element={element} theme={theme} products={products} compact={compact} />
         </div>
       ))}
 
@@ -1524,6 +1558,7 @@ function Step3Payment({
             products={products}
             onFormSubmit={onSubmit}
             isSubmitting={isSubmitting}
+            compact={compact}
           />
         </div>
       ))}
@@ -1531,14 +1566,14 @@ function Step3Payment({
       {/* Payment methods */}
       {elements.filter((e) => e.type === 'payment_methods').map((element) => (
         <div key={element.id} style={element.styles}>
-          <ElementRenderer element={element} theme={theme} products={products} />
+          <ElementRenderer element={element} theme={theme} products={products} compact={compact} />
         </div>
       ))}
 
       {/* Security badges */}
       {elements.filter((e) => e.type === 'security_badge').map((element) => (
         <div key={element.id} style={element.styles}>
-          <ElementRenderer element={element} theme={theme} products={products} />
+          <ElementRenderer element={element} theme={theme} products={products} compact={compact} />
         </div>
       ))}
     </form>
