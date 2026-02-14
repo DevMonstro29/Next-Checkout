@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Clock } from "lucide-react";
 import { colorWithAlpha } from "@/lib/utils";
 
@@ -27,15 +27,34 @@ const CountdownTimer = ({
   timerOpacity,
 }: CountdownTimerProps) => {
   const [seconds, setSeconds] = useState(initialSeconds);
+  const endTimeRef = useRef<number>(Date.now() + initialSeconds * 1000);
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
 
+  // Usa Date.now() para funcionar em mobile (setInterval é throttled em abas inativas)
   useEffect(() => {
-    if (seconds <= 0) {
+    if (initialSeconds <= 0) {
       onExpire?.();
       return;
     }
-    const interval = setInterval(() => setSeconds((s) => s - 1), 1000);
-    return () => clearInterval(interval);
-  }, [seconds, onExpire]);
+    endTimeRef.current = Date.now() + initialSeconds * 1000;
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+      setSeconds(remaining);
+      if (remaining <= 0) onExpireRef.current?.();
+    };
+    update();
+    const id = setInterval(update, 1000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') update();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- usa initialSeconds só no mount para evitar reset
+  }, []);
 
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
