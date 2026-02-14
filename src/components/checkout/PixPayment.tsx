@@ -190,15 +190,17 @@ const PixPayment = ({
     };
 
     checkStatus();
-    const t1 = setTimeout(checkStatus, 400);
-    const t2 = setTimeout(checkStatus, 900);
-    const pollInterval = setInterval(checkStatus, 1200);
+    const t1 = setTimeout(checkStatus, 300);
+    const t2 = setTimeout(checkStatus, 600);
+    const t3 = setTimeout(checkStatus, 1000);
+    const pollInterval = setInterval(checkStatus, 800);
     const timeout = setTimeout(() => clearInterval(pollInterval), 300000);
 
     return () => {
       es.close();
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
       clearInterval(pollInterval);
       clearTimeout(timeout);
     };
