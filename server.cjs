@@ -67,6 +67,7 @@ function isAdmin(user) {
 }
 
 const logFile = path.join(__dirname, "error.log");
+const webhookLogFile = path.join(__dirname, "webhook.log");
 
 function log(msg) {
   var line = new Date().toISOString() + " - " + msg + "\n";
@@ -74,6 +75,13 @@ function log(msg) {
     fs.appendFileSync(logFile, line);
   } catch (e) {}
   console.log(line);
+}
+
+function logWebhook(event, payload) {
+  const line = new Date().toISOString() + " | " + event + " | " + JSON.stringify(payload) + "\n";
+  try {
+    fs.appendFileSync(webhookLogFile, line);
+  } catch (e) {}
 }
 
 process.on("uncaughtException", function (err) {
@@ -138,6 +146,8 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || "").trim();
 const API_BASE_URL = (process.env.API_BASE_URL || process.env.VITE_API_URL || "").trim().replace(/\/$/, "");
+// Base URL para postback/webhook (postbackUrl por transação — não precisa configurar webhook no painel Porto Pag)
+const POSTBACK_BASE_URL = (process.env.POSTBACK_BASE_URL || "").trim().replace(/\/$/, "");
 
 // CORS: painel admin (allowedOrigins) + endpoints públicos de checkout (qualquer domínio)
 const allowedOrigins = ["https://app.nextcheckoutbr.com", "http://localhost:8080", "http://localhost:5173"];
@@ -169,10 +179,10 @@ app.use(
   }),
 );
 
-// Webhook PortoPag (docs.portopag.com): event, transaction_id no root; responder 200 OK em <5s
-app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), async (req, res) => {
+// Webhook PortoPag (docs.portopag.com): recebe eventos em /webhook; responder 200 OK em <5s
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    const rawBody = (req.body && Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "") || "{}";
+    let rawBody = (req.body && Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "") || "{}";
     const timestamp = (req.headers["x-portopag-timestamp"] || "").toString();
     const signature = (req.headers["x-portopag-signature"] || "").toString();
     let payload;
@@ -181,16 +191,25 @@ app.post("/api/webhook/portopag", express.raw({ type: "application/json" }), asy
     } catch {
       return res.status(400).json({ error: "JSON inválido" });
     }
+    // QStash ou outros intermediários podem encapsular o payload em { body: "..." }
+    if (payload.body && typeof payload.body === "string") {
+      try {
+        payload = JSON.parse(payload.body);
+      } catch {}
+    }
     const event = (payload.event || payload.event_name || payload.name || "").toLowerCase();
-    // PortoPag webhook: event, transaction_id no root (docs.portopag.com)
+    logWebhook(event || "(sem event)", payload);
+    // PortoPag webhook: transaction_id no root ou em data (docs.portopag.com)
     const txnId =
       payload.transaction_id ||
       (payload.data && (payload.data.id || payload.data.transaction_id || payload.data.transactionid)) ||
       payload.id ||
+      (payload.payment && (payload.payment.transaction_id || payload.payment.id)) ||
       "";
 
     if (!txnId) {
-      return res.status(400).json({ error: "transaction_id ausente" });
+      log("Webhook PortoPag: transaction_id ausente. Keys recebidas: " + Object.keys(payload).join(", ") + (payload.data ? " dataKeys=" + Object.keys(payload.data || {}).join(",") : ""));
+      return res.status(200).json({ received: true });
     }
 
     if (!supabase) {
@@ -822,14 +841,20 @@ app.post("/api/create-pix-payment", async (req, res) => {
       ],
     };
     // Postback: Porto Pag envia eventos para esta URL por transação (não precisa configurar webhook no painel)
-    let baseUrl = API_BASE_URL;
+    let baseUrl = POSTBACK_BASE_URL || API_BASE_URL;
     if (!baseUrl && req) {
       const proto = (req.get("x-forwarded-proto") || req.protocol || "https").split(",")[0].trim();
       const host = (req.get("x-forwarded-host") || req.get("host") || "").split(",")[0].trim();
       if (host) baseUrl = (proto === "https" ? "https" : "http") + "://" + host;
     }
+    if (!baseUrl && process.env.RAILWAY_PUBLIC_DOMAIN) {
+      baseUrl = "https://" + String(process.env.RAILWAY_PUBLIC_DOMAIN).trim().replace(/^https?:\/\//, "");
+    }
     if (baseUrl) {
-      payload.postbackUrl = baseUrl.replace(/\/$/, "") + "/api/webhook/portopag";
+      payload.postbackUrl = baseUrl.replace(/\/$/, "") + "/webhook";
+      console.log("Postback URL (Porto Pag):", payload.postbackUrl);
+    } else {
+      console.warn("ATENÇÃO: postbackUrl não enviado — configure API_BASE_URL ou POSTBACK_BASE_URL no backend.");
     }
 
     console.log("Enviando para PortoPag:", JSON.stringify(payload, null, 2));

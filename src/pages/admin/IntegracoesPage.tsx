@@ -159,7 +159,7 @@ const IntegracoesPage = () => {
                   (<em>payment.paid</em>, <em>payment.expired</em>, <em>payment.failed</em>) direto para nossa API — <strong>não é necessário configurar webhook no painel da PortoPag</strong>.
                 </p>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
-                  Configure <code className="bg-neutral-200 dark:bg-neutral-700 px-1 rounded">API_BASE_URL</code> no backend para garantir que o postback funcione (ex: https://api.nextcheckoutbr.com).
+                  Configure <code className="bg-neutral-200 dark:bg-neutral-700 px-1 rounded">API_BASE_URL</code> ou <code className="bg-neutral-200 dark:bg-neutral-700 px-1 rounded">POSTBACK_BASE_URL</code> no backend (ex: https://api.nextcheckoutbr.com). No Railway, <code className="bg-neutral-200 dark:bg-neutral-700 px-1 rounded">RAILWAY_PUBLIC_DOMAIN</code> é usado como fallback.
                 </p>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   Se vendas ficarem como &quot;Pendente&quot; após o pagamento, use o botão de sincronizar na página de Vendas ou configure o webhook no painel da PortoPag como backup.
