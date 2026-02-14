@@ -490,9 +490,19 @@ app.post("/api/admin/unban-user/:userId", async (req, res) => {
 });
 
 const APP_CANONICAL_HOST = (process.env.APP_CANONICAL_HOST || "app.nextcheckoutbr.com").trim().toLowerCase().replace(/\.$/, "");
+// Alvo CNAME para domínios customizados (Vercel)
+const VERCEL_CNAME_TARGET = (process.env.VERCEL_CNAME_TARGET || "c2565340da7c1d78.vercel-dns-017.com").trim().toLowerCase().replace(/\.$/, "");
 
 function normalizeHost(h) {
   return (h || "").trim().toLowerCase().replace(/\.$/, "");
+}
+
+function isAcceptedCnameTarget(target, canonical, vercelTarget) {
+  const t = normalizeHost(String(target)).replace(/\.$/, "");
+  if (t === canonical || t.endsWith("." + canonical)) return true;
+  if (t === vercelTarget || t.endsWith("." + vercelTarget)) return true;
+  if (/\.vercel-dns(-[a-z0-9]+)?\.com$/i.test(t)) return true;
+  return false;
 }
 
 async function verifyDomainDns(domain) {
@@ -500,25 +510,27 @@ async function verifyDomainDns(domain) {
   if (!host) return { verified: false, error: "Domínio inválido" };
   const canonical = normalizeHost(APP_CANONICAL_HOST);
 
+  const helpMsg = "Configure o CNAME no seu DNS apontando para " + VERCEL_CNAME_TARGET;
+
   try {
     const cnames = await dns.resolve(host, "CNAME");
     const targets = (cnames || []).map((c) => normalizeHost(String(c)));
-    if (targets.some((t) => t === canonical || t.endsWith("." + canonical) || t.replace(/\.$/, "") === canonical)) {
+    if (targets.some((t) => isAcceptedCnameTarget(t, canonical, VERCEL_CNAME_TARGET))) {
       return { verified: true };
     }
-    return { verified: false, error: "CNAME não aponta para " + APP_CANONICAL_HOST };
+    return { verified: false, error: "CNAME não aponta para " + VERCEL_CNAME_TARGET + ". " + helpMsg };
   } catch (e) {
     if (e.code === "ENODATA") {
       try {
         const [customIps, canonicalIps] = await Promise.all([
           dns.resolve4(host),
-          dns.resolve4(APP_CANONICAL_HOST),
+          dns.resolve4(canonical),
         ]);
         const set = new Set(canonicalIps || []);
         if ((customIps || []).some((ip) => set.has(ip))) return { verified: true };
-        return { verified: false, error: "Use CNAME apontando para " + APP_CANONICAL_HOST };
+        return { verified: false, error: helpMsg };
       } catch (e2) {
-        return { verified: false, error: "Domínio não resolve. Configure o CNAME para " + APP_CANONICAL_HOST };
+        return { verified: false, error: "Domínio não resolve. " + helpMsg };
       }
     }
     if (e.code === "ENOTFOUND") {

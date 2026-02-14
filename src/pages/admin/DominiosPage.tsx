@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const CANONICAL_HOST = import.meta.env.VITE_APP_CANONICAL_HOST || 'app.nextcheckoutbr.com';
+// Alvo CNAME para domínios customizados (Vercel)
+const CNAME_TARGET = import.meta.env.VITE_VERCEL_CNAME_TARGET || 'c2565340da7c1d78.vercel-dns-017.com';
 
 const DominiosPage = () => {
   const { user, session } = useAuth();
@@ -99,7 +100,7 @@ const DominiosPage = () => {
           toast.error('Erro ao adicionar domínio na Vercel. Verifique a conexão com o backend.');
         }
       } else if (value) {
-        toast.success(`Domínio salvo. Configure o CNAME no DNS apontando para ${CANONICAL_HOST} e clique em Verificar.`);
+        toast.success(`Domínio salvo. Configure o CNAME no DNS apontando para ${CNAME_TARGET} e clique em Verificar.`);
       } else {
         toast.success('Domínio removido.');
       }
@@ -155,7 +156,7 @@ const DominiosPage = () => {
         <p className="text-neutral-500 dark:text-neutral-400 mt-1">
           Conecte seus domínios personalizados aos checkouts. Configure o CNAME no DNS apontando para{' '}
           <code className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700 text-sm font-mono">
-            {CANONICAL_HOST}
+            {CNAME_TARGET}
           </code>
         </p>
       </div>
@@ -314,7 +315,7 @@ const DominiosPage = () => {
               <ol className="list-decimal list-inside space-y-0.5">
                 <li>Adicione um registro CNAME no seu DNS</li>
                 <li>Nome: seu subdomínio (ex: pagamento)</li>
-                <li>Valor: <code className="font-mono">{CANONICAL_HOST}</code></li>
+                <li>Valor: <code className="font-mono">{CNAME_TARGET}</code></li>
                 <li>O link de cada checkout será: <code className="font-mono">domínio.com/c/slug</code></li>
                 <li>Salve e clique em &quot;Verificar&quot; para ativar</li>
               </ol>
