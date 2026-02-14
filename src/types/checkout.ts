@@ -590,7 +590,7 @@ export const DEFAULT_ELEMENT_PROPS: Record<CheckoutElementType, Record<string, a
     confirmedTitle: 'Pagamento Confirmado!',
     confirmedSubtitle: 'Seu pagamento foi recebido com sucesso. Obrigado!',
     redirectMessage: 'Redirecionando automaticamente...',
-    redirectDelaySeconds: 1.5,
+    redirectDelaySeconds: 0.8,
     showQrCode: true,
   } as PixPageProps,
 };

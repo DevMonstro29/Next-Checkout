@@ -952,8 +952,8 @@ export function PixPagePropsEditor({ props, onUpdate }: { props: Record<string, 
           min="0.5"
           max="10"
           step="0.5"
-          value={typeof props.redirectDelaySeconds === 'number' ? props.redirectDelaySeconds : 1.5}
-          onChange={(e) => onUpdate({ redirectDelaySeconds: parseFloat(e.target.value) || 1.5 })}
+          value={typeof props.redirectDelaySeconds === 'number' ? props.redirectDelaySeconds : 0.8}
+          onChange={(e) => onUpdate({ redirectDelaySeconds: parseFloat(e.target.value) || 0.8 })}
           className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-600 rounded-lg px-3 py-2 text-sm text-neutral-900 dark:text-white"
         />
       </div>

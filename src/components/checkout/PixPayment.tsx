@@ -125,9 +125,9 @@ const PixPayment = ({
   const confirmedSubtitle = p.confirmedSubtitle || "Seu pagamento foi recebido com sucesso. Obrigado!";
   const redirectMessage = p.redirectMessage ?? "Redirecionando automaticamente...";
   const redirectScreenLogoUrl = p.redirectScreenLogoUrl || "";
-  const redirectDelaySeconds = typeof p.redirectDelaySeconds === "number" && p.redirectDelaySeconds > 0
+  const redirectDelaySeconds = typeof p.redirectDelaySeconds === "number" && p.redirectDelaySeconds >= 0
     ? p.redirectDelaySeconds
-    : 1.5;
+    : 0.8;
   const showQrCode = p.showQrCode ?? true;
   const headerLogoUrl = p.headerLogoUrl || "";
   const headerLogoSize = p.headerLogoSize || "56px";
@@ -161,7 +161,7 @@ const PixPayment = ({
   const effectiveInstrNumColor = p.instructionNumberColor || primaryColor;
   const effectiveInstrTextColor = p.instructionTextColor || theme?.colors.textMuted || "#6b7280";
 
-  // Detecção de pagamento: SSE em tempo real + polling como fallback (postback atualiza servidor)
+  // Detecção de pagamento: SSE em tempo real + polling rápido para redirect quase instantâneo
   useEffect(() => {
     if (paymentStatus === "paid" || paymentStatus === "expired" || paymentStatus === "cancelled") return;
 
@@ -190,11 +190,15 @@ const PixPayment = ({
     };
 
     checkStatus();
-    const pollInterval = setInterval(checkStatus, 3000);
+    const t1 = setTimeout(checkStatus, 400);
+    const t2 = setTimeout(checkStatus, 900);
+    const pollInterval = setInterval(checkStatus, 1200);
     const timeout = setTimeout(() => clearInterval(pollInterval), 300000);
 
     return () => {
       es.close();
+      clearTimeout(t1);
+      clearTimeout(t2);
       clearInterval(pollInterval);
       clearTimeout(timeout);
     };
