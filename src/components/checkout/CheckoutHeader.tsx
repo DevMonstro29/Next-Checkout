@@ -2,7 +2,7 @@ import { Shield } from "lucide-react";
 
 const CheckoutHeader = () => {
   return (
-    <div className="flex items-center justify-between py-4 px-2">
+    <div className="flex items-center justify-between py-2 px-2 pb-1">
       <div className="flex items-center gap-2">
         <img src="/logo.png" alt="Logo" className="h-12 object-contain" />
       </div>

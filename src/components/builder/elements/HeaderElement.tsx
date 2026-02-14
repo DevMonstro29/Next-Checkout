@@ -23,7 +23,7 @@ const HeaderElement = ({ props, theme }: Props) => {
 
   return (
     <div
-      className="flex items-center justify-between py-4 px-2"
+      className="flex items-center justify-between py-2 px-2 pb-1"
       style={{ backgroundColor: backgroundColor !== 'transparent' ? backgroundColor : undefined }}
     >
       <div className="flex items-center gap-2">

@@ -36,7 +36,7 @@ const StepIndicatorElement = ({ props, theme, currentStep = 1, totalSteps = 3 }:
   const circleSizePx = parseInt(circleSize) || 32;
 
   return (
-    <div className="flex items-center justify-center gap-0 py-4 px-2">
+    <div className="flex items-center justify-center gap-0 py-2 px-2">
       {allLabels.map((label, i) => {
         const stepNum = i + 1;
         const isActive = stepNum === currentStep;
