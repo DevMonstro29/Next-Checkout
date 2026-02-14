@@ -153,11 +153,19 @@ const PixPayment = ({
   const effectiveInstrNumColor = p.instructionNumberColor || primaryColor;
   const effectiveInstrTextColor = p.instructionTextColor || theme?.colors.textMuted || "#6b7280";
 
-  // Verificação via webhook: SSE notifica em tempo real quando pagamento é confirmado (sem polling)
+  // Detecção de pagamento: SSE em tempo real + polling como fallback (postback atualiza servidor)
   useEffect(() => {
     if (paymentStatus === "paid" || paymentStatus === "expired" || paymentStatus === "cancelled") return;
 
     const tid = paymentData.transaction_id;
+    const checkStatus = () =>
+      fetch(apiUrl(`/api/payment-status/${tid}`))
+        .then((r) => r.json())
+        .then((result) => {
+          if (result?.success && result.data?.status === "paid") setPaymentStatus("paid");
+        })
+        .catch(() => {});
+
     const url = apiUrl(`/api/payment-events/${tid}`);
     const es = new EventSource(url);
 
@@ -170,16 +178,17 @@ const PixPayment = ({
     };
     es.onerror = () => {
       es.close();
-      // Fallback: uma checagem via REST se SSE falhar (ex: antes do webhook)
-      fetch(apiUrl(`/api/payment-status/${tid}`))
-        .then((r) => r.json())
-        .then((result) => {
-          if (result?.success && result.data?.status === "paid") setPaymentStatus("paid");
-        })
-        .catch(() => {});
+      checkStatus();
     };
 
-    return () => es.close();
+    const pollInterval = setInterval(checkStatus, 4000);
+    const timeout = setTimeout(() => clearInterval(pollInterval), 300000);
+
+    return () => {
+      es.close();
+      clearInterval(pollInterval);
+      clearTimeout(timeout);
+    };
   }, [paymentData.transaction_id, paymentStatus]);
 
   // Build redirect URL with customer params if configured
@@ -204,13 +213,19 @@ const PixPayment = ({
 
   // Redirecionar automaticamente na mesma aba quando pagamento aprovado
   useEffect(() => {
-    if (paymentStatus !== "paid" || !redirectUrl) return;
+    if (paymentStatus !== "paid" || !redirectUrl || !redirectUrl.trim()) return;
+    const dest = getRedirectUrlWithParams();
+    if (!dest) return;
     setCountdown(1);
     const t = setTimeout(() => {
-      window.location.href = getRedirectUrlWithParams();
+      try {
+        window.location.assign(dest);
+      } catch {
+        window.location.href = dest;
+      }
     }, 1000);
     return () => clearTimeout(t);
-  }, [paymentStatus, redirectUrl]);
+  }, [paymentStatus, redirectUrl, customerData, redirectParamsConfig]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(paymentData.pix_code);

@@ -116,6 +116,7 @@ try {
 }
 
 var app = express();
+app.set("trust proxy", 1);
 var PORT = process.env.PORT || 8080;
 
 // API PortoPag: docs.portopag.com - POST /payments, GET /public/status/:id
@@ -820,8 +821,15 @@ app.post("/api/create-pix-payment", async (req, res) => {
         },
       ],
     };
-    if (API_BASE_URL) {
-      payload.postbackUrl = `${API_BASE_URL}/api/webhook/portopag`;
+    // Postback: Porto Pag envia eventos para esta URL por transação (não precisa configurar webhook no painel)
+    let baseUrl = API_BASE_URL;
+    if (!baseUrl && req) {
+      const proto = (req.get("x-forwarded-proto") || req.protocol || "https").split(",")[0].trim();
+      const host = (req.get("x-forwarded-host") || req.get("host") || "").split(",")[0].trim();
+      if (host) baseUrl = (proto === "https" ? "https" : "http") + "://" + host;
+    }
+    if (baseUrl) {
+      payload.postbackUrl = baseUrl.replace(/\/$/, "") + "/api/webhook/portopag";
     }
 
     console.log("Enviando para PortoPag:", JSON.stringify(payload, null, 2));
