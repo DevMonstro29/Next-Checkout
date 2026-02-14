@@ -5,7 +5,6 @@ interface Props {
   props: Record<string, any>;
   theme?: CheckoutTheme;
   isBuilder?: boolean;
-  compact?: boolean;
 }
 
 const FIELD_ICONS: Record<string, React.ReactNode> = {
@@ -15,7 +14,7 @@ const FIELD_ICONS: Record<string, React.ReactNode> = {
   'credit-card': <CreditCard className="w-4 h-4" />,
 };
 
-const FormElement = ({ props, theme, isBuilder, compact }: Props) => {
+const FormElement = ({ props, theme, isBuilder }: Props) => {
   const {
     title = 'Identificação',
     titleIcon = 'user',
@@ -48,8 +47,12 @@ const FormElement = ({ props, theme, isBuilder, compact }: Props) => {
 
   return (
     <div
-      className={compact ? '' : 'p-5'}
-      style={compact ? undefined : { backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: radius }}
+      className="p-5"
+      style={{
+        backgroundColor: cardBg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: radius,
+      }}
     >
       <div className="flex items-center gap-2 mb-4">
         {showTitleIcon && (

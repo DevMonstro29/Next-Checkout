@@ -35,8 +35,6 @@ interface ElementRendererProps {
   products?: CheckoutProduct[];
   onFormSubmit?: (data: any) => void;
   isSubmitting?: boolean;
-  /** Quando true, elementos com card (form, cart_summary, payment, order_bump) não aplicam o wrapper de card */
-  compact?: boolean;
 }
 
 const ElementRenderer = ({
@@ -46,7 +44,6 @@ const ElementRenderer = ({
   products,
   onFormSubmit,
   isSubmitting,
-  compact = false,
 }: ElementRendererProps) => {
   // Use provided props or fallback to context
   const ctx = useContext(RenderContext);
@@ -102,13 +99,13 @@ const ElementRenderer = ({
       case 'image':
         return <ImageElement props={element.props} theme={themeWithRadius} />;
       case 'form':
-        return <FormElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} compact={compact} />;
+        return <FormElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} />;
       case 'address':
-        return <AddressElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} compact={compact} />;
+        return <AddressElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} />;
       case 'cart_summary':
-        return <CartSummaryElement props={element.props} theme={themeWithRadius} products={resolvedProducts} compact={compact} />;
+        return <CartSummaryElement props={element.props} theme={themeWithRadius} products={resolvedProducts} />;
       case 'payment':
-        return <PaymentElement props={element.props} theme={themeWithRadius} compact={compact} />;
+        return <PaymentElement props={element.props} theme={themeWithRadius} />;
       case 'timer':
         return <TimerElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} />;
       case 'button':
@@ -134,7 +131,7 @@ const ElementRenderer = ({
       case 'step_indicator':
         return <StepIndicatorElement props={element.props} theme={themeWithRadius} totalSteps={ctx.checkoutSteps || 3} />;
       case 'order_bump':
-        return <OrderBumpElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} compact={compact} />;
+        return <OrderBumpElement props={element.props} theme={themeWithRadius} isBuilder={isBuilder} />;
       case 'pix_page':
         return <PixPageElement props={element.props} theme={themeWithRadius} />;
       default:

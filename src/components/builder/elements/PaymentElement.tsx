@@ -3,10 +3,9 @@ import { CheckoutTheme } from '@/types/checkout';
 interface Props {
   props: Record<string, any>;
   theme?: CheckoutTheme;
-  compact?: boolean;
 }
 
-const PaymentElement = ({ props, theme, compact }: Props) => {
+const PaymentElement = ({ props, theme }: Props) => {
   const {
     title = 'Pagamento',
     description = 'Ao selecionar o Pix, você será encaminhado para um ambiente seguro para finalizar seu pagamento.',
@@ -27,8 +26,12 @@ const PaymentElement = ({ props, theme, compact }: Props) => {
 
   return (
     <div
-      className={compact ? '' : 'p-5'}
-      style={compact ? undefined : { backgroundColor: cardBg, border: `1px solid ${borderColor}`, borderRadius: radius }}
+      className="p-5"
+      style={{
+        backgroundColor: cardBg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: radius,
+      }}
     >
       <h2 className="font-semibold text-sm mb-4" style={{ color: textColor }}>
         {title}
