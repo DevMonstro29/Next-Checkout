@@ -244,8 +244,30 @@ const PixPayment = ({
   }, [paymentStatus, redirectUrl, redirectDelaySeconds]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(paymentData.pix_code);
-    setCopied(true);
+    const text = paymentData.pix_code;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else if (document.body && document.queryCommandSupported?.("copy")) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.opacity = "0";
+        ta.setAttribute("readonly", "");
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand("copy");
+        } finally {
+          if (ta.parentNode) ta.parentNode.removeChild(ta);
+        }
+      }
+      setCopied(true);
+    } catch {
+      setCopied(true);
+    }
   };
 
   useEffect(() => {
