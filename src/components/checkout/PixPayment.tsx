@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiUrl } from "@/lib/api";
 import {
   Copy,
@@ -101,6 +101,7 @@ const PixPayment = ({
   const [copied, setCopied] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(paymentData.status);
   const [countdown, setCountdown] = useState(5);
+  const copyInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Defaults
   const p = pixPageProps || {};
@@ -249,31 +250,26 @@ const PixPayment = ({
     const done = () => setCopied(true);
 
     const fallbackExec = () => {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.setAttribute("readonly", "");
-        ta.style.cssText = "position:fixed;top:0;left:0;width:2px;height:2px;padding:0;border:none;opacity:0;pointer-events:none;";
-        const body = document.body;
-        if (!body) return;
-        body.appendChild(ta);
-        ta.select();
-        ta.setSelectionRange(0, text.length);
-        const ok = document.execCommand("copy");
-        requestAnimationFrame(() => {
-          try {
-            if (ta.parentNode) ta.parentNode.removeChild(ta);
-          } catch {}
-        });
-        if (ok) done();
-      } catch {
+      const el = copyInputRef.current;
+      if (el) {
+        try {
+          el.value = text;
+          el.select();
+          el.setSelectionRange(0, text.length);
+          const ok = document.execCommand("copy");
+          el.value = "";
+          if (ok) done();
+        } catch {
+          done();
+        }
+      } else {
         done();
       }
     };
 
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(done).catch(fallbackExec);
-    } else if (document.queryCommandSupported?.("copy")) {
+    } else if (copyInputRef.current && document.queryCommandSupported?.("copy")) {
       fallbackExec();
     } else {
       done();
@@ -334,6 +330,20 @@ const PixPayment = ({
 
   return (
     <div className="space-y-5 slide-up">
+      <textarea
+        ref={copyInputRef}
+        readOnly
+        aria-hidden="true"
+        tabIndex={-1}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+      />
       {/* Header message */}
       <div
         className="p-5 text-center"
