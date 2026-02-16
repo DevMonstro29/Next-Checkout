@@ -243,30 +243,40 @@ const PixPayment = ({
     return () => clearTimeout(t);
   }, [paymentStatus, redirectUrl, redirectDelaySeconds]);
 
-  const handleCopy = async () => {
+  const handleCopy = () => {
     const text = paymentData.pix_code;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else if (document.body && document.queryCommandSupported?.("copy")) {
+    if (!text) return;
+    const done = () => setCopied(true);
+
+    const fallbackExec = () => {
+      try {
         const ta = document.createElement("textarea");
         ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        ta.style.opacity = "0";
         ta.setAttribute("readonly", "");
-        document.body.appendChild(ta);
-        ta.focus();
+        ta.style.cssText = "position:fixed;top:0;left:0;width:2px;height:2px;padding:0;border:none;opacity:0;pointer-events:none;";
+        const body = document.body;
+        if (!body) return;
+        body.appendChild(ta);
         ta.select();
-        try {
-          document.execCommand("copy");
-        } finally {
-          if (ta.parentNode) ta.parentNode.removeChild(ta);
-        }
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand("copy");
+        requestAnimationFrame(() => {
+          try {
+            if (ta.parentNode) ta.parentNode.removeChild(ta);
+          } catch {}
+        });
+        if (ok) done();
+      } catch {
+        done();
       }
-      setCopied(true);
-    } catch {
-      setCopied(true);
+    };
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallbackExec);
+    } else if (document.queryCommandSupported?.("copy")) {
+      fallbackExec();
+    } else {
+      done();
     }
   };
 
@@ -388,7 +398,16 @@ const PixPayment = ({
         </div>
 
         <button
-          onClick={handleCopy}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              handleCopy();
+            } catch {
+              setCopied(true);
+            }
+          }}
           className="w-full font-bold py-3.5 text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           style={
             copied
