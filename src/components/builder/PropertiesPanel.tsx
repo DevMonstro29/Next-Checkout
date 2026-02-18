@@ -557,9 +557,9 @@ function CartSummaryPropsEditor({ props, onUpdate }: { props: Record<string, any
           <h4 className="text-neutral-700 dark:text-neutral-300 text-xs font-semibold mt-2">Cabeçalho</h4>
           <ImageUpload label="Logo do cabeçalho" value={props.headerLogoUrl || ''} onChange={(v) => onUpdate({ headerLogoUrl: v })} placeholder="URL ou upload" />
           <PropInput label="Tamanho da logo" value={props.headerLogoSize || '48px'} onChange={(v) => onUpdate({ headerLogoSize: v })} placeholder="ex: 48px, 3rem" />
-          <PropInput label="Linha 1 do título" value={props.headerLine1 || 'Dívida'} onChange={(v) => onUpdate({ headerLine1: v })} placeholder="Dívida" />
-          <PropInput label="Linha 2 do título" value={props.headerLine2 || 'Negativada'} onChange={(v) => onUpdate({ headerLine2: v })} placeholder="Negativada" />
-          <PropInput label="Linha 3 do título" value={props.headerLine3 || 'em seu CPF'} onChange={(v) => onUpdate({ headerLine3: v })} placeholder="em seu CPF" />
+          <PropInput label="Linha 1 do título" value={props.headerLine1 || ''} onChange={(v) => onUpdate({ headerLine1: v })} placeholder="ex: Texto da linha 1" />
+          <PropInput label="Linha 2 do título" value={props.headerLine2 || ''} onChange={(v) => onUpdate({ headerLine2: v })} placeholder="ex: Texto da linha 2" />
+          <PropInput label="Linha 3 do título" value={props.headerLine3 || ''} onChange={(v) => onUpdate({ headerLine3: v })} placeholder="ex: Texto da linha 3" />
           <PropColor label="Cor do título do cabeçalho" value={props.headerTextColor || ''} onChange={(v) => onUpdate({ headerTextColor: v })} />
           <h4 className="text-neutral-700 dark:text-neutral-300 text-xs font-semibold mt-4">Linhas de valores</h4>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Textos e valores abaixo são apenas visuais. O valor total exibido é sempre o valor real do pedido (usado no PIX).</p>
